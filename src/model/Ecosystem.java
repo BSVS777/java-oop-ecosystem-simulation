@@ -41,20 +41,20 @@ public class Ecosystem {
         
         switch (scenario) {
             case "BALANCED":
-                numPreys = 25;
-                numPredators = 25;
+                numPreys = 35;          // Aumentado de 25
+                numPredators = 15;      // Reducido de 25
                 break;
             case "PREDATORS_DOM":
-                numPreys = 15;
-                numPredators = 35;
+                numPreys = 20;          // Aumentado de 15
+                numPredators = 30;      // Reducido de 35
                 break;
             case "PREYS_DOM":
-                numPreys = 40;
-                numPredators = 10;
+                numPreys = 45;          // Aumentado de 40
+                numPredators = 5;       // Reducido de 10
                 break;
             default:
-                numPreys = 25;
-                numPredators = 25;
+                numPreys = 35;
+                numPredators = 15;
         }
         
         // Coloca presas aleatoriamente

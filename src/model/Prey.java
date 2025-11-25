@@ -64,7 +64,7 @@ public class Prey extends Animal {
      */
     @Override
     public Animal reproduce(Position position) {
-        System.out.println("🐰🐰 Presa se reproduce en " + position);
+        System.out.println("[PREY] Reproduced at " + position);
         return new Prey(position);
     }
     
@@ -96,6 +96,6 @@ public class Prey extends Animal {
     
     @Override
     public String toString() {
-        return "🐰 PREY " + super.toString();
+        return "PREY " + super.toString();
     }
 }

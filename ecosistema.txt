@@ -1,1 +1,4 @@
 2025-11-25 00:34:18|Bernal Santiago Vargas Solis|BALANCED|5|25|25
+2025-11-25 16:19:44|Bernal Santiago Vargas Solis|BALANCED|20|35|15
+2025-11-25 16:20:58|Bernal Santiago Vargas Solis|PREDATORS_DOM|20|20|30
+2025-11-25 16:22:40|Bernal Santiago Vargas Solis|PREYS_DOM|20|45|5
