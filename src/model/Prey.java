@@ -5,14 +5,16 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Clase Prey que hereda de Animal.
- * Implementa comportamiento específico de las presas:
- * - Movimiento aleatorio a celdas vacías
- * - Reproducción cada 2 turnos sobrevividos
+ * Clase Prey con BALANCE MEJORADO.
+ * Cambios clave:
+ * - Reproducción más lenta: cada 3 turnos (antes: 2)
+ * - Muerte por sobrepoblación: si >70% de celdas ocupadas
  */
 public class Prey extends Animal {
     
     private static final Random random = new Random();
+    private static final int REPRODUCTION_COOLDOWN = 3; // Aumentado de 2 a 3
+    private static final double OVERPOPULATION_THRESHOLD = 0.7; // 70% ocupación
     
     /**
      * Constructor de Prey
@@ -31,15 +33,19 @@ public class Prey extends Animal {
     public void move(Ecosystem ecosystem) {
         if (!alive) return;
         
+        // NUEVO: Verificar sobrepoblación
+        if (shouldDieFromOverpopulation(ecosystem)) {
+            die();
+            ecosystem.removeAnimal(this.position);
+            System.out.println("[PREY] Died from overpopulation at " + position);
+            return;
+        }
+        
         List<Position> emptyCells = getAdjacentEmptyCells(ecosystem);
         
         if (!emptyCells.isEmpty()) {
-            // Selecciona aleatoriamente una celda vacía
             Position newPosition = emptyCells.get(random.nextInt(emptyCells.size()));
-            
-            // Actualiza posición en el ecosistema
             ecosystem.moveAnimal(this, newPosition);
-            
             System.out.println("[PREY] Moved from " + this.position + " to " + newPosition);
             this.position = newPosition;
         } else {
@@ -48,13 +54,28 @@ public class Prey extends Animal {
     }
     
     /**
+     * Verifica si debe morir por sobrepoblación
+     */
+    private boolean shouldDieFromOverpopulation(Ecosystem ecosystem) {
+        int totalCells = 100;
+        int occupiedCells = totalCells - ecosystem.countEmptyCells();
+        double occupationRate = occupiedCells / (double) totalCells;
+        
+        // Si hay sobrepoblación, 30% de chance de morir por estrés/recursos
+        if (occupationRate > OVERPOPULATION_THRESHOLD) {
+            return random.nextDouble() < 0.3;
+        }
+        return false;
+    }
+    
+    /**
      * Verifica si la presa puede reproducirse.
-     * Condición: haber sobrevivido 2 turnos consecutivos.
+     * MODIFICADO: Ahora requiere 3 turnos sobrevividos (antes: 2)
      * @return true si puede reproducirse
      */
     @Override
     public boolean canReproduce() {
-        return alive && turnsSurvived >= 2;
+        return alive && turnsSurvived >= REPRODUCTION_COOLDOWN;
     }
     
     /**
@@ -75,17 +96,13 @@ public class Prey extends Animal {
      */
     private List<Position> getAdjacentEmptyCells(Ecosystem ecosystem) {
         List<Position> emptyCells = new ArrayList<>();
-        
-        // Direcciones: arriba, abajo, izquierda, derecha
         int[][] directions = {{-1,0}, {1,0}, {0,-1}, {0,1}};
         
         for (int[] dir : directions) {
             int newRow = position.getRow() + dir[0];
             int newColumn = position.getColumn() + dir[1];
-            
             Position newPos = new Position(newRow, newColumn);
             
-            // Verifica si la posición es válida y está vacía
             if (newPos.isValid() && ecosystem.isEmpty(newPos)) {
                 emptyCells.add(newPos);
             }

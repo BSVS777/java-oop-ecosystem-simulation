@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Clase que representa el ecosistema completo.
- * Gestiona la matriz 10x10 y la lógica de simulación.
+ * Clase Ecosystem con CONFIGURACIONES BALANCEADAS.
+ * Ajustadas las proporciones iniciales de cada escenario.
  */
 public class Ecosystem {
     
@@ -14,15 +14,10 @@ public class Ecosystem {
     private Animal[][] matrix;
     private int currentTurn;
     private int maxTurns;
-    private String scenario; // "BALANCED", "PREDATORS_DOM", "PREYS_DOM"
+    private String scenario;
     private List<Animal> aliveAnimals;
     private Random random;
     
-    /**
-     * Constructor del ecosistema
-     * @param maxTurns Número máximo de turnos a simular
-     * @param scenario Tipo de escenario
-     */
     public Ecosystem(int maxTurns, String scenario) {
         this.matrix = new Animal[SIZE][SIZE];
         this.currentTurn = 0;
@@ -33,7 +28,7 @@ public class Ecosystem {
     }
     
     /**
-     * Inicializa el ecosistema según el escenario especificado
+     * MODIFICADO: Configuraciones iniciales balanceadas
      */
     public void initialize() {
         int numPreys = 0;
@@ -41,37 +36,32 @@ public class Ecosystem {
         
         switch (scenario) {
             case "BALANCED":
-                numPreys = 35;          // Aumentado de 25
-                numPredators = 15;      // Reducido de 25
+                // Más depredadores para compensar su dificultad de reproducción
+                numPreys = 30;
+                numPredators = 20;
                 break;
             case "PREDATORS_DOM":
-                numPreys = 20;          // Aumentado de 15
-                numPredators = 30;      // Reducido de 35
+                // Depredadores dominan claramente
+                numPreys = 15;
+                numPredators = 35;
                 break;
             case "PREYS_DOM":
-                numPreys = 45;          // Aumentado de 40
-                numPredators = 5;       // Reducido de 10
-                break;
-            default:
+                // Presas dominan pero no abruman
                 numPreys = 35;
                 numPredators = 15;
+                break;
+            default:
+                numPreys = 30;
+                numPredators = 20;
         }
         
-        // Coloca presas aleatoriamente
         placeAnimalsRandomly(numPreys, "PREY");
-        
-        // Coloca depredadores aleatoriamente
         placeAnimalsRandomly(numPredators, "PREDATOR");
         
         System.out.println(">>> Ecosystem initialized - Scenario: " + scenario);
         System.out.println("    Preys: " + numPreys + " | Predators: " + numPredators);
     }
     
-    /**
-     * Coloca animales aleatoriamente en celdas vacías
-     * @param quantity Número de animales a colocar
-     * @param type "PREY" o "PREDATOR"
-     */
     private void placeAnimalsRandomly(int quantity, String type) {
         int placed = 0;
         
@@ -97,13 +87,12 @@ public class Ecosystem {
     
     /**
      * Ejecuta un turno completo de simulación
-     * @return Estado del ecosistema después del turno
      */
     public String executeTurn() {
         currentTurn++;
         System.out.println("\n--- Executing Turn " + currentTurn + " ---");
         
-        // 1. MOVIMIENTO (crear lista para evitar modificación concurrente)
+        // 1. MOVIMIENTO
         List<Animal> animalsToMove = new ArrayList<>(aliveAnimals);
         for (Animal animal : animalsToMove) {
             if (animal.isAlive()) {
@@ -135,7 +124,6 @@ public class Ecosystem {
                 animal.incrementTurnsSurvived();
                 
                 if (animal.canReproduce()) {
-                    // Busca celda vacía adyacente para reproducirse
                     Position emptyCell = findAdjacentEmptyCell(animal.getPosition());
                     if (emptyCell != null) {
                         Animal offspring = animal.reproduce(emptyCell);
@@ -147,15 +135,9 @@ public class Ecosystem {
         }
         aliveAnimals.addAll(newAnimals);
         
-        // 4. ESTADÍSTICAS DEL TURNO
         return generateTurnState();
     }
     
-    /**
-     * Busca una celda vacía adyacente a la posición dada
-     * @param pos Posición de referencia
-     * @return Posición vacía o null si no hay
-     */
     private Position findAdjacentEmptyCell(Position pos) {
         int[][] directions = {{-1,0}, {1,0}, {0,-1}, {0,1}};
         List<Position> emptyPositions = new ArrayList<>();
@@ -173,10 +155,6 @@ public class Ecosystem {
         return emptyPositions.isEmpty() ? null : emptyPositions.get(random.nextInt(emptyPositions.size()));
     }
     
-    /**
-     * Genera un string con el estado actual del turno
-     * @return Estado formateado
-     */
     private String generateTurnState() {
         int preys = countPreys();
         int predators = countPredators();
@@ -206,9 +184,7 @@ public class Ecosystem {
     }
     
     public void moveAnimal(Animal animal, Position newPos) {
-        // Limpia posición anterior
         matrix[animal.getPosition().getRow()][animal.getPosition().getColumn()] = null;
-        // Coloca en nueva posición
         matrix[newPos.getRow()][newPos.getColumn()] = animal;
     }
     
