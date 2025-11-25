@@ -2,6 +2,7 @@ package view;
 
 import model.*;
 import controller.EcosystemController;
+import util.AnimalIcon;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -413,16 +414,17 @@ public class EcosystemView extends JFrame {
                 JLabel cell = cellLabels[i][j];
                 
                 if (animal == null) {
+                    cell.setIcon(AnimalIcon.createEmptyIcon(50));
                     cell.setText("");
                     cell.setBackground(COLOR_EMPTY_CELL);
                 } else if (animal instanceof Prey) {
-                    cell.setText("P");
+                    cell.setIcon(AnimalIcon.createPreyIcon(50));
+                    cell.setText("");
                     cell.setBackground(COLOR_PREY);
-                    cell.setForeground(Color.WHITE);
                 } else if (animal instanceof Predator) {
-                    cell.setText("D");
+                    cell.setIcon(AnimalIcon.createPredatorIcon(50));
+                    cell.setText("");
                     cell.setBackground(COLOR_PREDATOR);
-                    cell.setForeground(Color.WHITE);
                 }
             }
         }
