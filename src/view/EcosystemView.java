@@ -59,6 +59,7 @@ public class EcosystemView extends JFrame {
     public EcosystemView(User user) {
         this.currentUser = user;
         this.controller = new EcosystemController();
+        this.controller.setCurrentUser(user.getName()); // Importante: establecer usuario
         this.cellLabels = new JLabel[10][10];
         this.isRunning = false;
         
@@ -72,7 +73,7 @@ public class EcosystemView extends JFrame {
     private void initComponents() {
         setTitle("Ecosystem Simulator - " + currentUser.getName());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1900, 1000);
+        setSize(1700, 1000);
         setResizable(true);
         
         // Panel principal con BorderLayout
