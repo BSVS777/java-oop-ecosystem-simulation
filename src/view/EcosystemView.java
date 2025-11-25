@@ -72,7 +72,7 @@ public class EcosystemView extends JFrame {
     private void initComponents() {
         setTitle("Ecosystem Simulator - " + currentUser.getName());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1200, 800);
+        setSize(1900, 1000);
         setResizable(true);
         
         // Panel principal con BorderLayout
