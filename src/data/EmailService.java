@@ -14,7 +14,7 @@ public class EmailService {
     private static final String SMTP_HOST = "smtp.gmail.com";
     private static final String SMTP_PORT = "587";
     private static final String SENDER_EMAIL = "emailsendertest9@gmail.com"; // direccion email
-    private static final String SENDER_PASSWORD = "olgv ijta giso ccvj"; // password generada por google
+    private static final String SENDER_PASSWORD = "olgv ijta giso ccvj       "; // password generada por google
     
     /**
      * Envia un correo de bienvenida al registrarse
