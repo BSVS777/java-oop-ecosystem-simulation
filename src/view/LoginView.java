@@ -10,9 +10,6 @@ import java.awt.event.ActionListener;
 /**
  * Ventana de inicio de sesion del sistema.
  * Permite a usuarios registrados acceder al simulador.
- * 
- * @author Tu Nombre
- * @version 1.0
  */
 public class LoginView extends JFrame {
     

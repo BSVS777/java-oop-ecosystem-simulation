@@ -1,6 +1,8 @@
 package controller;
 
 import model.Ecosystem;
+import data.EcosystemDAO;
+import data.StateDAO;
 
 /**
  * Controlador para la logica del ecosistema.
@@ -9,12 +11,26 @@ import model.Ecosystem;
 public class EcosystemController {
     
     private Ecosystem ecosystem;
+    private EcosystemDAO ecosystemDAO;
+    private StateDAO stateDAO;
+    private String currentUsername;
     
     /**
      * Constructor del controlador
      */
     public EcosystemController() {
         this.ecosystem = null;
+        this.ecosystemDAO = new EcosystemDAO();
+        this.stateDAO = new StateDAO();
+        this.currentUsername = "Guest";
+    }
+    
+    /**
+     * Establece el usuario actual
+     * @param username Nombre del usuario
+     */
+    public void setCurrentUser(String username) {
+        this.currentUsername = username;
     }
     
     /**
@@ -26,11 +42,22 @@ public class EcosystemController {
         this.ecosystem = new Ecosystem(maxTurns, scenario);
         this.ecosystem.initialize();
         
+        // Guardar configuracion inicial
+        int numPreys = ecosystem.countPreys();
+        int numPredators = ecosystem.countPredators();
+        ecosystemDAO.saveConfiguration(scenario, maxTurns, numPreys, numPredators, currentUsername);
+        
+        // Iniciar registro de estados
+        stateDAO.startNewSimulation(scenario, currentUsername);
+        
+        // Guardar estado inicial (turno 0)
+        stateDAO.saveTurnState(ecosystem);
+        
         System.out.println("[CONTROLLER] Ecosystem created:");
         System.out.println("  Scenario: " + scenario);
         System.out.println("  Max turns: " + maxTurns);
-        System.out.println("  Initial preys: " + ecosystem.countPreys());
-        System.out.println("  Initial predators: " + ecosystem.countPredators());
+        System.out.println("  Initial preys: " + numPreys);
+        System.out.println("  Initial predators: " + numPredators);
     }
     
     /**
@@ -46,6 +73,9 @@ public class EcosystemController {
         // Ejecutar turno
         ecosystem.executeTurn();
         
+        // Guardar estado del turno
+        stateDAO.saveTurnState(ecosystem);
+        
         // Verificar si debe continuar
         int currentTurn = ecosystem.getCurrentTurn();
         int maxTurns = ecosystem.getMaxTurns();
@@ -55,6 +85,9 @@ public class EcosystemController {
         boolean shouldContinue = (currentTurn < maxTurns) && !hasExtinction;
         
         if (!shouldContinue) {
+            // Guardar estado final
+            stateDAO.saveFinalState(ecosystem, currentTurn);
+            
             System.out.println("[CONTROLLER] Simulation ended:");
             System.out.println("  Turns executed: " + currentTurn);
             System.out.println("  Extinction: " + hasExtinction);
@@ -112,5 +145,21 @@ public class EcosystemController {
         stats.append("Extinction: ").append(ecosystem.hasExtinction()).append("\n");
         
         return stats.toString();
+    }
+    
+    /**
+     * Obtiene el DAO de ecosistema
+     * @return EcosystemDAO
+     */
+    public EcosystemDAO getEcosystemDAO() {
+        return ecosystemDAO;
+    }
+    
+    /**
+     * Obtiene el DAO de estados
+     * @return StateDAO
+     */
+    public StateDAO getStateDAO() {
+        return stateDAO;
     }
 }
