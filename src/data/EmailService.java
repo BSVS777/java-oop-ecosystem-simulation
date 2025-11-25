@@ -219,7 +219,7 @@ public class EmailService {
         
         // IMPORTANTE: Configurar SENDER_EMAIL y SENDER_PASSWORD antes de probar
         boolean sent = emailService.sendWelcomeEmail(
-            "emailsendertest9@gmail.com", 
+            "uyv310599@gmail.com", 
             "BSVS"
         );
         
