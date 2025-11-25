@@ -10,6 +10,9 @@ import java.awt.event.ActionListener;
 /**
  * Ventana de inicio de sesion del sistema.
  * Permite a usuarios registrados acceder al simulador.
+ * 
+ * @author Tu Nombre
+ * @version 1.0
  */
 public class LoginView extends JFrame {
     
@@ -56,7 +59,7 @@ public class LoginView extends JFrame {
         // Titulo
         lblTitle = new JLabel("ECOSYSTEM SIMULATOR", SwingConstants.CENTER);
         lblTitle.setFont(new Font("Arial", Font.BOLD, 24));
-        lblTitle.setForeground(new Color(239, 71, 111)); // Verde oscuro - texto principal
+        lblTitle.setForeground(new Color(4, 57, 21)); // Verde oscuro - texto principal
         lblTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
         
         // Panel del formulario
@@ -75,6 +78,7 @@ public class LoginView extends JFrame {
         // Etiqueta: ID Number
         lblIdNumber = new JLabel("ID Number:");
         lblIdNumber.setFont(new Font("Arial", Font.PLAIN, 14));
+        lblIdNumber.setForeground(new Color(4, 57, 21)); // Verde oscuro - texto
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 0.3;
@@ -83,6 +87,8 @@ public class LoginView extends JFrame {
         // Campo de texto: ID Number
         txtIdNumber = new JTextField(20);
         txtIdNumber.setFont(new Font("Arial", Font.PLAIN, 14));
+        txtIdNumber.setBackground(Color.WHITE);
+        txtIdNumber.setForeground(new Color(4, 57, 21)); // Verde oscuro
         gbc.gridx = 1;
         gbc.gridy = 0;
         gbc.weightx = 0.7;
@@ -91,6 +97,7 @@ public class LoginView extends JFrame {
         // Etiqueta: Password
         lblPassword = new JLabel("Password:");
         lblPassword.setFont(new Font("Arial", Font.PLAIN, 14));
+        lblPassword.setForeground(new Color(4, 57, 21)); // Verde oscuro - texto
         gbc.gridx = 0;
         gbc.gridy = 1;
         gbc.weightx = 0.3;
@@ -99,6 +106,8 @@ public class LoginView extends JFrame {
         // Campo de contraseña
         txtPassword = new JPasswordField(20);
         txtPassword.setFont(new Font("Arial", Font.PLAIN, 14));
+        txtPassword.setBackground(Color.WHITE);
+        txtPassword.setForeground(new Color(4, 57, 21)); // Verde oscuro
         gbc.gridx = 1;
         gbc.gridy = 1;
         gbc.weightx = 0.7;
@@ -107,15 +116,16 @@ public class LoginView extends JFrame {
         // Panel de botones
         panelButtons = new JPanel();
         panelButtons.setLayout(new FlowLayout(FlowLayout.CENTER, 15, 10));
-        panelButtons.setBackground(new Color(240, 248, 255));
+        panelButtons.setBackground(new Color(176, 206, 136)); // Verde claro - fondo
         
         // Boton Login
         btnLogin = new JButton("Login");
         btnLogin.setFont(new Font("Arial", Font.BOLD, 14));
-        btnLogin.setBackground(new Color(76, 175, 80));
-        btnLogin.setForeground(Color.BLACK);
+        btnLogin.setBackground(new Color(76, 118, 59)); // Verde medio - boton principal
+        btnLogin.setForeground(Color.WHITE);
         btnLogin.setFocusPainted(false);
         btnLogin.setPreferredSize(new Dimension(120, 35));
+        btnLogin.setBorderPainted(false);
         btnLogin.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -126,10 +136,11 @@ public class LoginView extends JFrame {
         // Boton Register
         btnRegister = new JButton("Register");
         btnRegister.setFont(new Font("Arial", Font.BOLD, 14));
-        btnRegister.setBackground(new Color(33, 150, 243));
-        btnRegister.setForeground(Color.BLACK);
+        btnRegister.setBackground(new Color(255, 253, 143)); // Amarillo suave - accion secundaria
+        btnRegister.setForeground(new Color(4, 57, 21)); // Verde oscuro - contraste
         btnRegister.setFocusPainted(false);
         btnRegister.setPreferredSize(new Dimension(120, 35));
+        btnRegister.setBorderPainted(false);
         btnRegister.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -227,18 +238,9 @@ public class LoginView extends JFrame {
      * @param user Usuario que inicio sesion
      */
     private void openEcosystemView(User user) {
-        // TODO: Implementar en Fase 3
-        JOptionPane.showMessageDialog(
-            this,
-            "Ecosystem view will be implemented in Phase 3",
-            "Coming Soon",
-            JOptionPane.INFORMATION_MESSAGE
-        );
-        
-        // Por ahora, solo cerramos la ventana de login
-        // this.dispose();
-        // EcosystemView ecosystemView = new EcosystemView(user);
-        // ecosystemView.setVisible(true);
+        this.dispose();
+        EcosystemView ecosystemView = new EcosystemView(user);
+        ecosystemView.setVisible(true);
     }
     
     /**
