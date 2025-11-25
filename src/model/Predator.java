@@ -29,7 +29,7 @@ public class Predator extends Animal {
     
     /**
      * Implementa el movimiento del depredador.
-     * Prioridad: 1) Moverse hacia una presa adyacente (jarta)
+     * Prioridad: 1) Moverse hacia una presa adyacente (come)
      *            2) Moverse a una celda vacía
      * @param ecosystem Referencia al ecosistema
      */
@@ -53,10 +53,10 @@ public class Predator extends Animal {
         if (!emptyCells.isEmpty()) {
             Position newPosition = emptyCells.get(random.nextInt(emptyCells.size()));
             ecosystem.moveAnimal(this, newPosition);
-            System.out.println("🦁 Depredador se movió de " + this.position + " a " + newPosition);
+            System.out.println("[PREDATOR] Moved from " + this.position + " to " + newPosition);
             this.position = newPosition;
         } else {
-            System.out.println("🦁 Depredador en " + this.position + " no tiene celdas disponibles");
+            System.out.println("[PREDATOR] At " + this.position + " has no available cells");
         }
     }
     
@@ -73,9 +73,9 @@ public class Predator extends Animal {
             prey.die();
             ecosystem.removeAnimal(preyPosition);
             
-            // Mueve el depredador a esa posición
+            // Mueve el depredador a esa posicion
             ecosystem.moveAnimal(this, preyPosition);
-            System.out.println("🦁💀 Depredador cazó presa en " + preyPosition);
+            System.out.println("[PREDATOR] Hunted prey at " + preyPosition);
             this.position = preyPosition;
             
             // Resetea contador de hambre
@@ -86,14 +86,15 @@ public class Predator extends Animal {
     
     /**
      * Verifica si el depredador puede reproducirse.
-     * Condición: haber comido al menos una vez en los últimos 3 turnos.
+     * Condición: haber comido al menos una vez en los últimos 3 turnos Y
+     *            haber sobrevivido al menos 3 turnos.
      * @return true si puede reproducirse
      */
     @Override
     public boolean canReproduce() {
         if (!alive) return false;
-        // Puede reproducirse si comió en los últimos 3 turnos
-        return turnsWithoutEating < MAX_TURNS_WITHOUT_EATING;
+        // Más restrictivo: necesita haber comido Y haber sobrevivido suficiente
+        return turnsWithoutEating == 0 && turnsSurvived >= 3;
     }
     
     /**
@@ -111,7 +112,7 @@ public class Predator extends Animal {
      */
     @Override
     public Animal reproduce(Position position) {
-        System.out.println("🦁🦁 Depredador se reproduce en " + position);
+        System.out.println("[PREDATOR] Reproduced at " + position);
         return new Predator(position);
     }
     
@@ -164,6 +165,6 @@ public class Predator extends Animal {
     
     @Override
     public String toString() {
-        return "🦁 PREDATOR " + super.toString() + ", Turnos sin comer: " + turnsWithoutEating;
+        return "PREDATOR " + super.toString() + ", Turns without eating: " + turnsWithoutEating;
     }
 }

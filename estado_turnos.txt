@@ -1,0 +1,95 @@
+=== SIMULATION: BALANCED_Bernal Santiago Vargas Solis_20251125_003418 ===
+TURN: 0
+SCENARIO: BALANCED
+TIMESTAMP: 2025-11-25 00:34:18
+PREYS: 25
+PREDATORS: 25
+EMPTY: 50
+EXTINCTION: false
+MATRIX:
+E,D,E,E,D,D,E,P,P,E
+P,E,E,E,E,E,D,E,P,P
+E,D,E,E,D,D,D,E,E,P
+D,P,D,P,D,E,D,D,E,P
+P,E,E,D,E,P,E,E,P,P
+P,P,E,E,P,E,P,E,D,P
+E,E,P,D,E,E,E,E,E,E
+P,D,E,E,E,E,D,E,D,P
+D,E,E,E,D,P,E,D,E,P
+E,E,E,E,P,E,D,P,D,D
+--- END TURN ---
+
+=== SIMULATION: BALANCED_Bernal Santiago Vargas Solis_20251125_003418 ===
+TURN: 1
+SCENARIO: BALANCED
+TIMESTAMP: 2025-11-25 00:34:20
+PREYS: 11
+PREDATORS: 50
+EMPTY: 39
+EXTINCTION: false
+MATRIX:
+D,D,D,D,E,D,D,E,E,P
+E,E,E,E,E,D,D,D,E,E
+E,E,E,D,D,D,D,D,P,P
+D,D,D,D,D,D,D,E,P,E
+D,P,D,D,D,D,D,D,D,P
+P,D,E,D,D,P,E,E,D,E
+P,D,E,E,E,E,E,E,E,P
+D,E,E,E,E,D,D,E,D,D
+D,E,E,E,E,D,D,D,D,D
+E,E,E,P,D,D,D,D,E,D
+--- END TURN ---
+
+=== SIMULATION: BALANCED_Bernal Santiago Vargas Solis_20251125_003418 ===
+TURN: 2
+SCENARIO: BALANCED
+TIMESTAMP: 2025-11-25 00:34:21
+PREYS: 6
+PREDATORS: 85
+EMPTY: 9
+EXTINCTION: false
+MATRIX:
+D,D,D,D,D,D,D,D,P,P
+D,D,E,D,D,D,D,D,D,D
+D,E,E,D,D,D,D,D,D,P
+D,E,D,D,D,D,D,D,D,P
+D,D,D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,E,D,D
+D,D,D,D,D,D,D,D,D,D
+D,D,D,P,D,D,E,D,D,D
+E,D,E,P,D,D,D,D,D,D
+E,D,D,D,D,D,D,D,D,D
+--- END TURN ---
+
+=== SIMULATION: BALANCED_Bernal Santiago Vargas Solis_20251125_003418 ===
+TURN: 3
+SCENARIO: BALANCED
+TIMESTAMP: 2025-11-25 00:34:23
+PREYS: 0
+PREDATORS: 99
+EMPTY: 1
+EXTINCTION: true
+MATRIX:
+D,D,D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D,D,D
+D,D,D,D,E,D,D,D,D,D
+D,D,D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D,D,D
+--- END TURN ---
+
+╔═══════════════════════════════════════════╗
+║         SIMULATION COMPLETED              ║
+╚═══════════════════════════════════════════╝
+SIMULATION ID: BALANCED_Bernal Santiago Vargas Solis_20251125_003418
+TOTAL TURNS: 3
+FINAL PREYS: 0
+FINAL PREDATORS: 99
+EXTINCTION OCCURRED: true
+RESULT: Preys went extinct
+════════════════════════════════════════════
+
