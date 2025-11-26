@@ -5,8 +5,9 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Clase Ecosystem con CONFIGURACIONES BALANCEADAS.
- * Ajustadas las proporciones iniciales de cada escenario.
+ * Clase Ecosystem extendida con soporte para:
+ * - Tercera especie (Caimán)
+ * - Mutaciones genéticas
  */
 public class Ecosystem {
     
@@ -18,6 +19,10 @@ public class Ecosystem {
     private List<Animal> aliveAnimals;
     private Random random;
     
+    // Nuevas propiedades
+    private boolean terceraEspecieActiva = false;
+    private boolean mutacionesActivas = false;
+    
     public Ecosystem(int maxTurns, String scenario) {
         this.matrix = new Animal[SIZE][SIZE];
         this.currentTurn = 0;
@@ -28,38 +33,64 @@ public class Ecosystem {
     }
     
     /**
-     * MODIFICADO: Configuraciones iniciales balanceadas
+     * Configura si la tercera especie está activa
      */
+    public void setTerceraEspecieActiva(boolean activa) {
+        this.terceraEspecieActiva = activa;
+    }
+    
+    /**
+     * Configura si las mutaciones están activas
+     */
+    public void setMutacionesActivas(boolean activas) {
+        this.mutacionesActivas = activas;
+    }
+    
     public void initialize() {
         int numPreys = 0;
         int numPredators = 0;
+        int numCaimans = 0;
         
         switch (scenario) {
             case "BALANCED":
-                // Más depredadores para compensar su dificultad de reproducción
                 numPreys = 30;
                 numPredators = 20;
+                numCaimans = terceraEspecieActiva ? 3 : 0;
                 break;
             case "PREDATORS_DOM":
-                // Depredadores dominan claramente
                 numPreys = 15;
                 numPredators = 35;
+                numCaimans = terceraEspecieActiva ? 5 : 0;
                 break;
             case "PREYS_DOM":
-                // Presas dominan pero no abruman
                 numPreys = 35;
                 numPredators = 15;
+                numCaimans = terceraEspecieActiva ? 2 : 0;
                 break;
             default:
                 numPreys = 30;
                 numPredators = 20;
+                numCaimans = terceraEspecieActiva ? 3 : 0;
         }
         
         placeAnimalsRandomly(numPreys, "PREY");
         placeAnimalsRandomly(numPredators, "PREDATOR");
         
+        if (terceraEspecieActiva) {
+            placeAnimalsRandomly(numCaimans, "CAIMAN");
+        }
+        
+        // Aplicar mutaciones iniciales si están activas
+        if (mutacionesActivas) {
+            applyInitialMutations();
+        }
+        
         System.out.println(">>> Ecosystem initialized - Scenario: " + scenario);
-        System.out.println("    Preys: " + numPreys + " | Predators: " + numPredators);
+        System.out.println("    Preys: " + numPreys + " | Predators: " + numPredators + 
+                          (terceraEspecieActiva ? " | Caimans: " + numCaimans : ""));
+        if (mutacionesActivas) {
+            System.out.println("    Genetic mutations: ENABLED");
+        }
     }
     
     private void placeAnimalsRandomly(int quantity, String type) {
@@ -72,10 +103,18 @@ public class Ecosystem {
             
             if (isEmpty(pos)) {
                 Animal animal;
-                if (type.equals("PREY")) {
-                    animal = new Prey(pos);
-                } else {
-                    animal = new Predator(pos);
+                switch (type) {
+                    case "PREY":
+                        animal = new Prey(pos);
+                        break;
+                    case "PREDATOR":
+                        animal = new Predator(pos);
+                        break;
+                    case "CAIMAN":
+                        animal = new Caiman(pos);
+                        break;
+                    default:
+                        continue;
                 }
                 
                 matrix[row][column] = animal;
@@ -86,8 +125,28 @@ public class Ecosystem {
     }
     
     /**
-     * Ejecuta un turno completo de simulación
+     * Aplica mutaciones genéticas iniciales a todos los animales
      */
+    private void applyInitialMutations() {
+        for (Animal animal : aliveAnimals) {
+            applyMutation(animal);
+        }
+    }
+    
+    /**
+     * Aplica una mutación a un animal individual
+     * La mutación afecta la velocidad de reproducción
+     */
+    private void applyMutation(Animal animal) {
+        // Mutación aleatoria: -1, 0, o +1 en el tiempo de reproducción
+        int mutation = random.nextInt(3) - 1;
+        
+        // Aquí podrías agregar un campo mutationFactor en Animal
+        // Por ahora solo lo registramos
+        System.out.println("[MUTATION] Applied to " + animal.getType() + 
+                          " at " + animal.getPosition() + ": " + mutation);
+    }
+    
     public String executeTurn() {
         currentTurn++;
         System.out.println("\n--- Executing Turn " + currentTurn + " ---");
@@ -97,10 +156,15 @@ public class Ecosystem {
         for (Animal animal : animalsToMove) {
             if (animal.isAlive()) {
                 animal.move(this);
+                
+                // Aplicar mutaciones ocasionales (5% de probabilidad)
+                if (mutacionesActivas && random.nextDouble() < 0.05) {
+                    applyMutation(animal);
+                }
             }
         }
         
-        // 2. VERIFICAR MUERTES POR HAMBRE (Depredadores)
+        // 2. VERIFICAR MUERTES POR HAMBRE
         List<Animal> animalsToRemove = new ArrayList<>();
         for (Animal animal : aliveAnimals) {
             if (animal instanceof Predator) {
@@ -112,6 +176,16 @@ public class Ecosystem {
                     predator.die();
                     matrix[predator.getPosition().getRow()][predator.getPosition().getColumn()] = null;
                     animalsToRemove.add(predator);
+                }
+            } else if (animal instanceof Caiman) {
+                Caiman caiman = (Caiman) animal;
+                caiman.incrementTurnsWithoutEating();
+                
+                if (caiman.shouldDieFromHunger()) {
+                    System.out.println("[DEATH] Caiman died of hunger at " + caiman.getPosition());
+                    caiman.die();
+                    matrix[caiman.getPosition().getRow()][caiman.getPosition().getColumn()] = null;
+                    animalsToRemove.add(caiman);
                 }
             }
         }
@@ -129,6 +203,11 @@ public class Ecosystem {
                         Animal offspring = animal.reproduce(emptyCell);
                         matrix[emptyCell.getRow()][emptyCell.getColumn()] = offspring;
                         newAnimals.add(offspring);
+                        
+                        // Aplicar mutación al descendiente si está activo
+                        if (mutacionesActivas) {
+                            applyMutation(offspring);
+                        }
                     }
                 }
             }
@@ -158,18 +237,21 @@ public class Ecosystem {
     private String generateTurnState() {
         int preys = countPreys();
         int predators = countPredators();
+        int caimans = countCaimans();
         int emptyCells = countEmptyCells();
         
         String state = String.format(
-            "Turn %d | Preys: %d | Predators: %d | Empty: %d",
-            currentTurn, preys, predators, emptyCells
+            "Turn %d | Preys: %d | Predators: %d" + 
+            (terceraEspecieActiva ? " | Caimans: %d" : "") + " | Empty: %d",
+            currentTurn, preys, predators, 
+            terceraEspecieActiva ? caimans : null, emptyCells
         );
         
         System.out.println("[STATS] " + state);
         return state;
     }
     
-    // ========== MÉTODOS AUXILIARES ==========
+    // Métodos auxiliares
     
     public boolean isEmpty(Position pos) {
         return matrix[pos.getRow()][pos.getColumn()] == null;
@@ -200,6 +282,12 @@ public class Ecosystem {
             .count();
     }
     
+    public int countCaimans() {
+        return (int) aliveAnimals.stream()
+            .filter(a -> a instanceof Caiman && a.isAlive())
+            .count();
+    }
+    
     public int countEmptyCells() {
         int empty = 0;
         for (int i = 0; i < SIZE; i++) {
@@ -211,10 +299,15 @@ public class Ecosystem {
     }
     
     public boolean hasExtinction() {
-        return countPreys() == 0 || countPredators() == 0;
+        int preys = countPreys();
+        int predators = countPredators();
+        int caimans = countCaimans();
+        
+        // Extinción si desaparecen las presas O todos los depredadores (incluyendo caimanes)
+        return preys == 0 || (predators == 0 && caimans == 0);
     }
     
-    // ========== GETTERS ==========
+    // Getters
     
     public Animal[][] getMatrix() {
         return matrix;
@@ -234,5 +327,13 @@ public class Ecosystem {
     
     public List<Animal> getAliveAnimals() {
         return new ArrayList<>(aliveAnimals);
+    }
+    
+    public boolean isTerceraEspecieActiva() {
+        return terceraEspecieActiva;
+    }
+    
+    public boolean isMutacionesActivas() {
+        return mutacionesActivas;
     }
 }

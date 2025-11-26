@@ -5,8 +5,7 @@ import data.EcosystemDAO;
 import data.StateDAO;
 
 /**
- * Controlador para la logica del ecosistema.
- * Maneja la creacion y ejecucion de simulaciones.
+ * Controlador extendido con soporte para tercera especie y mutaciones
  */
 public class EcosystemController {
     
@@ -15,9 +14,10 @@ public class EcosystemController {
     private StateDAO stateDAO;
     private String currentUsername;
     
-    /**
-     * Constructor del controlador
-     */
+    // Flags para extensiones
+    private boolean terceraEspecieActiva = false;
+    private boolean mutacionesActivas = false;
+    
     public EcosystemController() {
         this.ecosystem = null;
         this.ecosystemDAO = new EcosystemDAO();
@@ -25,32 +25,40 @@ public class EcosystemController {
         this.currentUsername = "Guest";
     }
     
-    /**
-     * Establece el usuario actual
-     * @param username Nombre del usuario
-     */
     public void setCurrentUser(String username) {
         this.currentUsername = username;
     }
     
     /**
-     * Crea un nuevo ecosistema con la configuracion especificada
-     * @param maxTurns Numero maximo de turnos
-     * @param scenario Tipo de escenario (BALANCED, PREDATORS_DOM, PREYS_DOM)
+     * Configura la tercera especie antes de crear el ecosistema
      */
+    public void setTerceraEspecieActiva(boolean activa) {
+        this.terceraEspecieActiva = activa;
+    }
+    
+    /**
+     * Configura las mutaciones antes de crear el ecosistema
+     */
+    public void setMutacionesActivas(boolean activas) {
+        this.mutacionesActivas = activas;
+    }
+    
     public void createEcosystem(int maxTurns, String scenario) {
         this.ecosystem = new Ecosystem(maxTurns, scenario);
+        
+        // Configurar extensiones ANTES de inicializar
+        this.ecosystem.setTerceraEspecieActiva(terceraEspecieActiva);
+        this.ecosystem.setMutacionesActivas(mutacionesActivas);
+        
         this.ecosystem.initialize();
         
-        // Guardar configuracion inicial
+        // Guardar configuración inicial
         int numPreys = ecosystem.countPreys();
         int numPredators = ecosystem.countPredators();
         ecosystemDAO.saveConfiguration(scenario, maxTurns, numPreys, numPredators, currentUsername);
         
         // Iniciar registro de estados
         stateDAO.startNewSimulation(scenario, currentUsername);
-        
-        // Guardar estado inicial (turno 0)
         stateDAO.saveTurnState(ecosystem);
         
         System.out.println("[CONTROLLER] Ecosystem created:");
@@ -58,34 +66,30 @@ public class EcosystemController {
         System.out.println("  Max turns: " + maxTurns);
         System.out.println("  Initial preys: " + numPreys);
         System.out.println("  Initial predators: " + numPredators);
+        if (terceraEspecieActiva) {
+            System.out.println("  Initial caimans: " + ecosystem.countCaimans());
+        }
+        if (mutacionesActivas) {
+            System.out.println("  Mutations: ACTIVE");
+        }
     }
     
-    /**
-     * Ejecuta un turno de simulacion
-     * @return true si la simulacion debe continuar, false si termino
-     */
     public boolean executeTurn() {
         if (ecosystem == null) {
             System.err.println("[ERROR] No ecosystem initialized");
             return false;
         }
         
-        // Ejecutar turno
         ecosystem.executeTurn();
-        
-        // Guardar estado del turno
         stateDAO.saveTurnState(ecosystem);
         
-        // Verificar si debe continuar
         int currentTurn = ecosystem.getCurrentTurn();
         int maxTurns = ecosystem.getMaxTurns();
         boolean hasExtinction = ecosystem.hasExtinction();
         
-        // Continua si no ha llegado al maximo y no hay extincion
         boolean shouldContinue = (currentTurn < maxTurns) && !hasExtinction;
         
         if (!shouldContinue) {
-            // Guardar estado final
             stateDAO.saveFinalState(ecosystem, currentTurn);
             
             System.out.println("[CONTROLLER] Simulation ended:");
@@ -93,22 +97,18 @@ public class EcosystemController {
             System.out.println("  Extinction: " + hasExtinction);
             System.out.println("  Final preys: " + ecosystem.countPreys());
             System.out.println("  Final predators: " + ecosystem.countPredators());
+            if (terceraEspecieActiva) {
+                System.out.println("  Final caimans: " + ecosystem.countCaimans());
+            }
         }
         
         return shouldContinue;
     }
     
-    /**
-     * Obtiene el ecosistema actual
-     * @return Ecosistema actual
-     */
     public Ecosystem getEcosystem() {
         return ecosystem;
     }
     
-    /**
-     * Reinicia el ecosistema actual
-     */
     public void resetEcosystem() {
         if (ecosystem != null) {
             String scenario = ecosystem.getScenario();
@@ -117,18 +117,10 @@ public class EcosystemController {
         }
     }
     
-    /**
-     * Verifica si hay un ecosistema activo
-     * @return true si hay un ecosistema inicializado
-     */
     public boolean hasEcosystem() {
         return ecosystem != null;
     }
     
-    /**
-     * Obtiene estadisticas del ecosistema actual
-     * @return String con estadisticas formateadas
-     */
     public String getStats() {
         if (ecosystem == null) {
             return "No ecosystem initialized";
@@ -141,25 +133,34 @@ public class EcosystemController {
              .append("/").append(ecosystem.getMaxTurns()).append("\n");
         stats.append("Preys: ").append(ecosystem.countPreys()).append("\n");
         stats.append("Predators: ").append(ecosystem.countPredators()).append("\n");
+        
+        if (ecosystem.isTerceraEspecieActiva()) {
+            stats.append("Caimans: ").append(ecosystem.countCaimans()).append("\n");
+        }
+        
         stats.append("Empty Cells: ").append(ecosystem.countEmptyCells()).append("\n");
         stats.append("Extinction: ").append(ecosystem.hasExtinction()).append("\n");
+        
+        if (ecosystem.isMutacionesActivas()) {
+            stats.append("Mutations: ACTIVE\n");
+        }
         
         return stats.toString();
     }
     
-    /**
-     * Obtiene el DAO de ecosistema
-     * @return EcosystemDAO
-     */
     public EcosystemDAO getEcosystemDAO() {
         return ecosystemDAO;
     }
     
-    /**
-     * Obtiene el DAO de estados
-     * @return StateDAO
-     */
     public StateDAO getStateDAO() {
         return stateDAO;
+    }
+    
+    public boolean isTerceraEspecieActiva() {
+        return terceraEspecieActiva;
+    }
+    
+    public boolean isMutacionesActivas() {
+        return mutacionesActivas;
     }
 }

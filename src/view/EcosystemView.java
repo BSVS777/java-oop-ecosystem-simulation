@@ -2,34 +2,29 @@ package view;
 
 import model.*;
 import controller.EcosystemController;
-import util.AnimalIcon;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import util.ImagePanel;
 
 /**
- * Ventana principal para visualizar y controlar la simulacion del ecosistema.
- * Muestra la matriz 10x10 con representacion grafica de animales.
+ * Vista mejorada del ecosistema con imágenes, fondo de bosque y funcionalidades completas.
+ * Incluye soporte para tercera especie (Caimán) y mutaciones genéticas.
  */
 public class EcosystemView extends JFrame {
     
-    // Colores ecologicos
-    private static final Color COLOR_BG_LIGHT = new Color(176, 206, 136); // Verde claro
-    private static final Color COLOR_BG_DARK = new Color(76, 118, 59);    // Verde medio
-    private static final Color COLOR_TEXT_DARK = new Color(4, 57, 21);     // Verde oscuro
-    private static final Color COLOR_HIGHLIGHT = new Color(255, 253, 143); // Amarillo suave
-    private static final Color COLOR_EMPTY_CELL = new Color(245, 245, 220); // Beige claro
-    private static final Color COLOR_PREY = new Color(100, 200, 100);      // Verde claro para presas
-    private static final Color COLOR_PREDATOR = new Color(180, 50, 50);    // Rojo oscuro para depredadores
+    // Tu paleta de colores original
+    private static final Color COLOR_BG_LIGHT = new Color(176, 206, 136);
+    private static final Color COLOR_BG_DARK = new Color(76, 118, 59);
+    private static final Color COLOR_TEXT_DARK = new Color(4, 57, 21);
+    private static final Color COLOR_HIGHLIGHT = new Color(255, 253, 143);
     
     // Componentes principales
     private User currentUser;
     private EcosystemController controller;
+    private JPanel panelMatrixContainer;
     private JPanel panelMatrix;
-    private JPanel panelControls;
-    private JPanel panelStats;
     private JLabel[][] cellLabels;
+    private JLabel backgroundLabel; // Para el fondo de bosque
     
     // Controles
     private JComboBox<String> comboScenario;
@@ -39,11 +34,14 @@ public class EcosystemView extends JFrame {
     private JButton btnStop;
     private JButton btnReport;
     private JButton btnLogout;
+    private JButton btnToggleTerceraEspecie;
+    private JButton btnToggleMutaciones;
     
-    // Estadisticas
+    // Estadísticas
     private JLabel lblCurrentTurn;
     private JLabel lblPreyCount;
     private JLabel lblPredatorCount;
+    private JLabel lblCaimanCount; // Nuevo: contador de caimanes
     private JLabel lblEmptyCount;
     private JProgressBar progressBar;
     private JTextArea txtLog;
@@ -51,15 +49,13 @@ public class EcosystemView extends JFrame {
     // Estado
     private Timer simulationTimer;
     private boolean isRunning;
+    private boolean terceraEspecieActiva = false;
+    private boolean mutacionesActivas = false;
     
-    /**
-     * Constructor
-     * @param user Usuario que inicio sesion
-     */
     public EcosystemView(User user) {
         this.currentUser = user;
         this.controller = new EcosystemController();
-        this.controller.setCurrentUser(user.getName()); // Importante: establecer usuario
+        this.controller.setCurrentUser(user.getName());
         this.cellLabels = new JLabel[10][10];
         this.isRunning = false;
         
@@ -67,220 +63,219 @@ public class EcosystemView extends JFrame {
         setLocationRelativeTo(null);
     }
     
-    /**
-     * Inicializa todos los componentes de la interfaz
-     */
     private void initComponents() {
         setTitle("Ecosystem Simulator - " + currentUser.getName());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1700, 1000);
+        setSize(1650, 950);
         setResizable(true);
         
-        // Panel principal con BorderLayout
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBackground(COLOR_BG_LIGHT);
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
-        // Panel superior: Controles
-        createControlPanel();
-        mainPanel.add(panelControls, BorderLayout.NORTH);
-        
-        // Panel central: Matriz del ecosistema
-        createMatrixPanel();
-        mainPanel.add(panelMatrix, BorderLayout.CENTER);
-        
-        // Panel derecho: Estadisticas y log
-        createStatsPanel();
-        mainPanel.add(panelStats, BorderLayout.EAST);
+        mainPanel.add(createControlPanel(), BorderLayout.NORTH);
+        mainPanel.add(createMatrixPanelWithBackground(), BorderLayout.CENTER);
+        mainPanel.add(createStatsPanel(), BorderLayout.EAST);
         
         add(mainPanel);
     }
     
-    /**
-     * Crea el panel de controles superior
-     */
-    private void createControlPanel() {
-        panelControls = new JPanel();
-        panelControls.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 10));
-        panelControls.setBackground(COLOR_BG_DARK);
-        panelControls.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    private JPanel createControlPanel() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        panel.setBackground(COLOR_BG_DARK);
+        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         
-        // Etiqueta de escenario
-        JLabel lblScenario = new JLabel("Scenario:");
-        lblScenario.setForeground(Color.WHITE);
-        lblScenario.setFont(new Font("Arial", Font.BOLD, 14));
-        panelControls.add(lblScenario);
+        // Scenario
+        panel.add(createLabel("Scenario:"));
+        comboScenario = new JComboBox<>(new String[]{"BALANCED", "PREDATORS_DOM", "PREYS_DOM"});
+        comboScenario.setPreferredSize(new Dimension(150, 28));
+        panel.add(comboScenario);
         
-        // ComboBox de escenarios
-        String[] scenarios = {"BALANCED", "PREDATORS_DOM", "PREYS_DOM"};
-        comboScenario = new JComboBox<>(scenarios);
-        comboScenario.setFont(new Font("Arial", Font.PLAIN, 13));
-        comboScenario.setPreferredSize(new Dimension(180, 30));
-        panelControls.add(comboScenario);
-        
-        // Etiqueta de turnos
-        JLabel lblTurns = new JLabel("Max Turns:");
-        lblTurns.setForeground(Color.WHITE);
-        lblTurns.setFont(new Font("Arial", Font.BOLD, 14));
-        panelControls.add(lblTurns);
-        
-        // Spinner de turnos
+        // Max Turns
+        panel.add(createLabel("Max Turns:"));
         spinnerTurns = new JSpinner(new SpinnerNumberModel(20, 5, 100, 5));
-        spinnerTurns.setFont(new Font("Arial", Font.PLAIN, 13));
-        spinnerTurns.setPreferredSize(new Dimension(80, 30));
-        panelControls.add(spinnerTurns);
+        spinnerTurns.setPreferredSize(new Dimension(70, 28));
+        panel.add(spinnerTurns);
         
-        // Separador
-        panelControls.add(Box.createHorizontalStrut(20));
+        panel.add(Box.createHorizontalStrut(10));
         
-        // Boton Start
-        btnStart = new JButton("Start Simulation");
-        btnStart.setFont(new Font("Arial", Font.BOLD, 13));
-        btnStart.setBackground(COLOR_HIGHLIGHT);
-        btnStart.setForeground(COLOR_TEXT_DARK);
-        btnStart.setFocusPainted(false);
-        btnStart.setBorderPainted(false);
-        btnStart.setPreferredSize(new Dimension(150, 35));
+        // Toggle buttons
+        btnToggleTerceraEspecie = createToggleButton("3rd Species: OFF", new Color(100, 149, 237));
+        btnToggleTerceraEspecie.addActionListener(e -> toggleTerceraEspecie());
+        panel.add(btnToggleTerceraEspecie);
+        
+        btnToggleMutaciones = createToggleButton("Mutations: OFF", new Color(147, 112, 219));
+        btnToggleMutaciones.addActionListener(e -> toggleMutaciones());
+        panel.add(btnToggleMutaciones);
+        
+        panel.add(Box.createHorizontalStrut(10));
+        
+        // Control buttons
+        btnStart = createButton("Start", COLOR_HIGHLIGHT, COLOR_TEXT_DARK, 100);
         btnStart.addActionListener(e -> startSimulation());
-        panelControls.add(btnStart);
+        panel.add(btnStart);
         
-        // Boton Pause
-        btnPause = new JButton("Pause");
-        btnPause.setFont(new Font("Arial", Font.BOLD, 13));
-        btnPause.setBackground(Color.ORANGE);
-        btnPause.setForeground(Color.WHITE);
-        btnPause.setFocusPainted(false);
-        btnPause.setBorderPainted(false);
-        btnPause.setPreferredSize(new Dimension(100, 35));
+        btnPause = createButton("Pause", Color.ORANGE, Color.BLACK, 90);
         btnPause.setEnabled(false);
         btnPause.addActionListener(e -> pauseSimulation());
-        panelControls.add(btnPause);
+        panel.add(btnPause);
         
-        // Boton Stop
-        btnStop = new JButton("Stop");
-        btnStop.setFont(new Font("Arial", Font.BOLD, 13));
-        btnStop.setBackground(new Color(200, 50, 50));
-        btnStop.setForeground(Color.WHITE);
-        btnStop.setFocusPainted(false);
-        btnStop.setBorderPainted(false);
-        btnStop.setPreferredSize(new Dimension(100, 35));
+        btnStop = createButton("Stop", new Color(200, 50, 50), Color.BLACK, 80);
         btnStop.setEnabled(false);
         btnStop.addActionListener(e -> stopSimulation());
-        panelControls.add(btnStop);
+        panel.add(btnStop);
         
-        // Separador
-        panelControls.add(Box.createHorizontalStrut(20));
+        panel.add(Box.createHorizontalStrut(10));
         
-        // Boton Report
-        btnReport = new JButton("Generate Report");
-        btnReport.setFont(new Font("Arial", Font.BOLD, 13));
-        btnReport.setBackground(COLOR_BG_DARK);
-        btnReport.setForeground(Color.WHITE);
-        btnReport.setFocusPainted(false);
-        btnReport.setBorderPainted(false);
-        btnReport.setPreferredSize(new Dimension(150, 35));
+        btnReport = createButton("Report", COLOR_BG_DARK, Color.BLACK, 90);
         btnReport.setEnabled(false);
         btnReport.addActionListener(e -> generateReport());
-        panelControls.add(btnReport);
+        panel.add(btnReport);
         
-        // Boton Logout
-        btnLogout = new JButton("Logout");
-        btnLogout.setFont(new Font("Arial", Font.BOLD, 13));
-        btnLogout.setBackground(COLOR_TEXT_DARK);
-        btnLogout.setForeground(Color.WHITE);
-        btnLogout.setFocusPainted(false);
-        btnLogout.setBorderPainted(false);
-        btnLogout.setPreferredSize(new Dimension(100, 35));
+        btnLogout = createButton("Logout", COLOR_TEXT_DARK, Color.BLACK, 90);
         btnLogout.addActionListener(e -> logout());
-        panelControls.add(btnLogout);
+        panel.add(btnLogout);
+        
+        return panel;
     }
     
-    /**
-     * Crea el panel de la matriz del ecosistema
-     */
-    private void createMatrixPanel() {
-        panelMatrix = new JPanel();
-        panelMatrix.setLayout(new GridLayout(10, 10, 2, 2));
-        panelMatrix.setBackground(COLOR_TEXT_DARK);
-        panelMatrix.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(COLOR_TEXT_DARK, 3),
+    private JPanel createMatrixPanelWithBackground() {
+        panelMatrixContainer = new JPanel(new BorderLayout());
+        panelMatrixContainer.setBackground(COLOR_BG_LIGHT);
+        panelMatrixContainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        
+        // 1. Instanciar tu ImagePanel con la ruta de la imagen
+        ImagePanel imagePanel = new ImagePanel("/imagenes/bosque.png");
+        
+        // 2. Crear la matriz (Grid)
+        panelMatrix = createMatrixGrid();
+        
+        // 3. Añadir la matriz al ImagePanel. 
+        // Al tener GridBagLayout (definido en ImagePanel), se centrará automáticamente.
+        imagePanel.add(panelMatrix);
+        
+        // Guardamos referencia para el fondo (opcional, por si quieres cambiarlo luego)
+        // backgroundLabel ya no es necesario como JLabel, ahora el contenedor es imagePanel
+        
+        panelMatrixContainer.add(imagePanel, BorderLayout.CENTER);
+        
+        return panelMatrixContainer;
+    }
+    
+    // Método para cuando falla la carga (puedes mantenerlo igual o simplificarlo)
+    private void createMatrixWithoutBackground() {
+        JPanel centerPanel = new JPanel(new GridBagLayout()); // Centrado mejorado
+        centerPanel.setBackground(COLOR_BG_LIGHT);
+        
+        panelMatrix = createMatrixGrid();
+        centerPanel.add(panelMatrix);
+        
+        panelMatrixContainer.add(centerPanel, BorderLayout.CENTER);
+    }
+    
+    private JPanel createMatrixGrid() {
+        // Espacio entre celdas (hgap, vgap) reducido a 1 o 2 para ver líneas finas
+        JPanel grid = new JPanel(new GridLayout(10, 10, 2, 2));
+        
+        // --- CAMBIO CLAVE 1: El contenedor de la rejilla debe ser TRANSPARENTE ---
+        grid.setOpaque(false); 
+        
+        // Borde exterior sutil para contener la matriz visualmente
+        grid.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(60, 40, 20, 180), 5), // Marco madera oscuro
             BorderFactory.createEmptyBorder(5, 5, 5, 5)
         ));
         
-        // Crear celdas de la matriz
+        // Tamaño fijo para asegurar que cuadra bien en pantalla
+        grid.setPreferredSize(new Dimension(650, 650));
+        
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 10; j++) {
                 JLabel cell = new JLabel("", SwingConstants.CENTER);
+                
+                // --- CAMBIO CLAVE 2: Manejo de opacidad de celdas ---
+                // Para que el color semi-transparente funcione sobre el fondo, 
+                // la celda debe ser opaca, pero usaremos un color con Alpha.
                 cell.setOpaque(true);
-                cell.setBackground(COLOR_EMPTY_CELL);
-                cell.setFont(new Font("Arial", Font.BOLD, 20));
-                cell.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+                
+                // Color base: Blanco hueso muy transparente (Alpha 120 de 255)
+                // Esto permite ver el bosque a través de las celdas vacías
+                cell.setBackground(new Color(255, 253, 208, 120)); 
+                
+                cell.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 36));
+                
+                // Borde de celda más sutil
+                cell.setBorder(BorderFactory.createLineBorder(new Color(101, 67, 33, 100), 1));
+                
                 cell.setPreferredSize(new Dimension(60, 60));
                 
                 cellLabels[i][j] = cell;
-                panelMatrix.add(cell);
+                grid.add(cell);
             }
         }
+        
+        return grid;
     }
     
-    /**
-     * Crea el panel de estadisticas y log
-     */
-    private void createStatsPanel() {
-        panelStats = new JPanel();
-        panelStats.setLayout(new BoxLayout(panelStats, BoxLayout.Y_AXIS));
-        panelStats.setBackground(Color.WHITE);
-        panelStats.setBorder(BorderFactory.createCompoundBorder(
+    private JPanel createStatsPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(COLOR_TEXT_DARK, 2),
             BorderFactory.createEmptyBorder(15, 15, 15, 15)
         ));
-        panelStats.setPreferredSize(new Dimension(300, 0));
+        panel.setPreferredSize(new Dimension(300, 0));
         
-        // Titulo
+        // Title
         JLabel lblTitle = new JLabel("STATISTICS");
         lblTitle.setFont(new Font("Arial", Font.BOLD, 18));
         lblTitle.setForeground(COLOR_TEXT_DARK);
         lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
-        panelStats.add(lblTitle);
-        panelStats.add(Box.createVerticalStrut(15));
+        panel.add(lblTitle);
+        panel.add(Box.createVerticalStrut(15));
         
-        // Turno actual
+        // Stats labels
         lblCurrentTurn = createStatLabel("Current Turn: 0");
-        panelStats.add(lblCurrentTurn);
-        panelStats.add(Box.createVerticalStrut(10));
+        panel.add(lblCurrentTurn);
+        panel.add(Box.createVerticalStrut(10));
         
-        // Contador de presas
-        lblPreyCount = createStatLabel("Preys: 0");
-        lblPreyCount.setForeground(COLOR_PREY);
-        panelStats.add(lblPreyCount);
-        panelStats.add(Box.createVerticalStrut(5));
+        lblPreyCount = createStatLabel("🐰 Preys: 0");
+        lblPreyCount.setForeground(new Color(100, 200, 100));
+        panel.add(lblPreyCount);
+        panel.add(Box.createVerticalStrut(5));
         
-        // Contador de depredadores
-        lblPredatorCount = createStatLabel("Predators: 0");
-        lblPredatorCount.setForeground(COLOR_PREDATOR);
-        panelStats.add(lblPredatorCount);
-        panelStats.add(Box.createVerticalStrut(5));
+        lblPredatorCount = createStatLabel("🐺 Predators: 0");
+        lblPredatorCount.setForeground(new Color(180, 50, 50));
+        panel.add(lblPredatorCount);
+        panel.add(Box.createVerticalStrut(5));
         
-        // Celdas vacias
+        // Contador de Caimanes (oculto inicialmente)
+        lblCaimanCount = createStatLabel("🐊 Caimans: 0");
+        lblCaimanCount.setForeground(new Color(70, 130, 180));
+        lblCaimanCount.setVisible(false); // Oculto hasta que se active
+        panel.add(lblCaimanCount);
+        panel.add(Box.createVerticalStrut(5));
+        
         lblEmptyCount = createStatLabel("Empty Cells: 100");
-        panelStats.add(lblEmptyCount);
-        panelStats.add(Box.createVerticalStrut(15));
+        panel.add(lblEmptyCount);
+        panel.add(Box.createVerticalStrut(15));
         
-        // Barra de progreso
+        // Progress bar
         progressBar = new JProgressBar(0, 100);
         progressBar.setStringPainted(true);
         progressBar.setForeground(COLOR_BG_DARK);
         progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
-        panelStats.add(progressBar);
-        panelStats.add(Box.createVerticalStrut(20));
+        panel.add(progressBar);
+        panel.add(Box.createVerticalStrut(20));
         
-        // Log de eventos
+        // Event log
         JLabel lblLog = new JLabel("EVENT LOG");
         lblLog.setFont(new Font("Arial", Font.BOLD, 14));
         lblLog.setForeground(COLOR_TEXT_DARK);
         lblLog.setAlignmentX(Component.CENTER_ALIGNMENT);
-        panelStats.add(lblLog);
-        panelStats.add(Box.createVerticalStrut(5));
+        panel.add(lblLog);
+        panel.add(Box.createVerticalStrut(5));
         
         txtLog = new JTextArea(15, 25);
         txtLog.setEditable(false);
@@ -289,14 +284,41 @@ public class EcosystemView extends JFrame {
         txtLog.setWrapStyleWord(true);
         JScrollPane scrollLog = new JScrollPane(txtLog);
         scrollLog.setMaximumSize(new Dimension(Integer.MAX_VALUE, 300));
-        panelStats.add(scrollLog);
+        panel.add(scrollLog);
         
-        panelStats.add(Box.createVerticalGlue());
+        panel.add(Box.createVerticalGlue());
+        
+        return panel;
     }
     
-    /**
-     * Helper para crear etiquetas de estadisticas
-     */
+    // Helper methods
+    private JLabel createLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setForeground(Color.WHITE);
+        label.setFont(new Font("Arial", Font.BOLD, 13));
+        return label;
+    }
+    
+    private JButton createButton(String text, Color bg, Color fg, int width) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Arial", Font.BOLD, 12));
+        btn.setBackground(bg);
+        btn.setForeground(fg);
+        btn.setFocusPainted(false);
+        btn.setPreferredSize(new Dimension(width, 30));
+        return btn;
+    }
+    
+    private JButton createToggleButton(String text, Color bg) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Arial", Font.BOLD, 11));
+        btn.setBackground(bg);
+        btn.setForeground(Color.BLACK);
+        btn.setFocusPainted(false);
+        btn.setPreferredSize(new Dimension(130, 30));
+        return btn;
+    }
+    
     private JLabel createStatLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(new Font("Arial", Font.BOLD, 16));
@@ -305,69 +327,60 @@ public class EcosystemView extends JFrame {
         return label;
     }
     
-    /**
-     * Inicia la simulacion
-     */
+    // Simulation control methods
     private void startSimulation() {
         if (isRunning) {
-            JOptionPane.showMessageDialog(this, 
-                "Simulation is already running", 
-                "Info", 
-                JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Simulation is already running", 
+                "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
         
-        // Obtener configuracion
         String scenario = (String) comboScenario.getSelectedItem();
         int maxTurns = (Integer) spinnerTurns.getValue();
         
-        // Crear ecosistema
+        // Configurar extensiones en el controlador ANTES de crear el ecosistema
+        controller.setTerceraEspecieActiva(terceraEspecieActiva);
+        controller.setMutacionesActivas(mutacionesActivas);
+        
         controller.createEcosystem(maxTurns, scenario);
         
-        // Actualizar UI
         btnStart.setEnabled(false);
         btnPause.setEnabled(true);
         btnStop.setEnabled(true);
+        btnToggleTerceraEspecie.setEnabled(false);
+        btnToggleMutaciones.setEnabled(false);
         comboScenario.setEnabled(false);
         spinnerTurns.setEnabled(false);
         
         isRunning = true;
-        addLog("Simulation started - Scenario: " + scenario);
+        addLog("✓ Simulation started - Scenario: " + scenario);
+        if (terceraEspecieActiva) {
+            addLog("  • Third species (Caiman) enabled");
+            lblCaimanCount.setVisible(true);
+        }
+        if (mutacionesActivas) addLog("  • Genetic mutations enabled");
         
-        // Actualizar vista inicial
         updateMatrixView();
         updateStats();
         
-        // Iniciar timer para turnos automaticos
-        simulationTimer = new Timer(1500, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                executeTurn();
-            }
-        });
+        simulationTimer = new Timer(1500, e -> executeTurn());
         simulationTimer.start();
     }
     
-    /**
-     * Pausa/Resume la simulacion
-     */
     private void pauseSimulation() {
         if (simulationTimer != null) {
             if (simulationTimer.isRunning()) {
                 simulationTimer.stop();
                 btnPause.setText("Resume");
-                addLog("Simulation paused");
+                addLog("⏸ Simulation paused");
             } else {
                 simulationTimer.start();
                 btnPause.setText("Pause");
-                addLog("Simulation resumed");
+                addLog("▶ Simulation resumed");
             }
         }
     }
     
-    /**
-     * Detiene la simulacion
-     */
     private void stopSimulation() {
         if (simulationTimer != null) {
             simulationTimer.stop();
@@ -378,16 +391,15 @@ public class EcosystemView extends JFrame {
         btnPause.setEnabled(false);
         btnStop.setEnabled(false);
         btnReport.setEnabled(true);
+        btnToggleTerceraEspecie.setEnabled(true);
+        btnToggleMutaciones.setEnabled(true);
         comboScenario.setEnabled(true);
         spinnerTurns.setEnabled(true);
         btnPause.setText("Pause");
         
-        addLog("Simulation stopped");
+        addLog("■ Simulation stopped");
     }
     
-    /**
-     * Ejecuta un turno de simulacion
-     */
     private void executeTurn() {
         boolean continueSimulation = controller.executeTurn();
         
@@ -400,9 +412,6 @@ public class EcosystemView extends JFrame {
         }
     }
     
-    /**
-     * Actualiza la vista de la matriz
-     */
     private void updateMatrixView() {
         Ecosystem ecosystem = controller.getEcosystem();
         if (ecosystem == null) return;
@@ -415,25 +424,51 @@ public class EcosystemView extends JFrame {
                 JLabel cell = cellLabels[i][j];
                 
                 if (animal == null) {
-                    cell.setIcon(AnimalIcon.createEmptyIcon(50));
+                    cell.setIcon(null);
                     cell.setText("");
-                    cell.setBackground(COLOR_EMPTY_CELL);
+                    // Vuelve al color base semi-transparente para ver el bosque
+                    cell.setBackground(new Color(255, 253, 208, 120)); 
                 } else if (animal instanceof Prey) {
-                    cell.setIcon(AnimalIcon.createPreyIcon(50));
-                    cell.setText("");
-                    cell.setBackground(COLOR_PREY);
+                    loadAnimalIcon(cell, "/imagenes/conejo.png", "🐰");
+                    // Verde claro con transparencia (Alpha 180) para resaltar pero integrar
+                    cell.setBackground(new Color(144, 238, 144, 180)); 
+                } else if (animal instanceof Caiman) {
+                    loadAnimalIcon(cell, "/imagenes/caiman.png", "🐊");
+                    // Azul/Cian oscuro transparente
+                    cell.setBackground(new Color(70, 130, 180, 180)); 
                 } else if (animal instanceof Predator) {
-                    cell.setIcon(AnimalIcon.createPredatorIcon(50));
-                    cell.setText("");
-                    cell.setBackground(COLOR_PREDATOR);
+                    loadAnimalIcon(cell, "/imagenes/hiena.png", "🐺");
+                    // Rojo/Salmón transparente
+                    cell.setBackground(new Color(255, 160, 122, 180)); 
                 }
             }
         }
+        
+        // IMPORTANTE: Repintar el contenedor padre para procesar transparencias correctamente
+        if (panelMatrix != null) {
+            panelMatrix.revalidate();
+            panelMatrix.repaint();
+        }
     }
     
-    /**
-     * Actualiza las estadisticas
-     */
+    private void loadAnimalIcon(JLabel cell, String imagePath, String emojiBackup) {
+        try {
+            ImageIcon originalIcon = new ImageIcon(getClass().getResource(imagePath));
+            if (originalIcon.getImageLoadStatus() == MediaTracker.COMPLETE) {
+                Image img = originalIcon.getImage();
+                Image scaledImg = img.getScaledInstance(55, 55, Image.SCALE_SMOOTH);
+                cell.setIcon(new ImageIcon(scaledImg));
+                cell.setText("");
+            } else {
+                cell.setIcon(null);
+                cell.setText(emojiBackup);
+            }
+        } catch (Exception e) {
+            cell.setIcon(null);
+            cell.setText(emojiBackup);
+        }
+    }
+    
     private void updateStats() {
         Ecosystem ecosystem = controller.getEcosystem();
         if (ecosystem == null) return;
@@ -442,68 +477,104 @@ public class EcosystemView extends JFrame {
         int maxTurns = ecosystem.getMaxTurns();
         int preys = ecosystem.countPreys();
         int predators = ecosystem.countPredators();
+        int caimans = ecosystem.countCaimans();
         int empty = ecosystem.countEmptyCells();
         
         lblCurrentTurn.setText("Current Turn: " + currentTurn + "/" + maxTurns);
         lblPreyCount.setText("Preys: " + preys);
         lblPredatorCount.setText("Predators: " + predators);
+        
+        if (terceraEspecieActiva) {
+            lblCaimanCount.setText("Caimans: " + caimans);
+        }
+        
         lblEmptyCount.setText("Empty Cells: " + empty);
         
         int progress = (int) ((currentTurn / (double) maxTurns) * 100);
         progressBar.setValue(progress);
         
-        // Agregar evento al log
-        String event = String.format("Turn %d: P=%d D=%d E=%d", 
-            currentTurn, preys, predators, empty);
-        addLog(event);
+        String logMsg = String.format("Turn %d: P=%d D=%d", currentTurn, preys, predators);
+        if (terceraEspecieActiva) {
+            logMsg += String.format(" C=%d", caimans);
+        }
+        logMsg += String.format(" E=%d", empty);
+        addLog(logMsg);
     }
     
-    /**
-     * Agrega un mensaje al log
-     */
     private void addLog(String message) {
         txtLog.append(message + "\n");
         txtLog.setCaretPosition(txtLog.getDocument().getLength());
     }
     
-    /**
-     * Muestra dialogo al finalizar la simulacion
-     */
     private void showSimulationEndDialog() {
         Ecosystem ecosystem = controller.getEcosystem();
         
-        String message = "Simulation completed!\n\n";
-        message += "Total turns executed: " + ecosystem.getCurrentTurn() + "\n";
-        message += "Final preys: " + ecosystem.countPreys() + "\n";
-        message += "Final predators: " + ecosystem.countPredators() + "\n\n";
+        String message = "Simulation completed!\n\n" +
+            "Total turns: " + ecosystem.getCurrentTurn() + "\n" +
+            "Final preys: " + ecosystem.countPreys() + "\n" +
+            "Final predators: " + ecosystem.countPredators() + "\n\n";
         
         if (ecosystem.hasExtinction()) {
-            if (ecosystem.countPreys() == 0) {
-                message += "Result: Preys went extinct!";
-            } else {
-                message += "Result: Predators went extinct!";
-            }
+            message += ecosystem.countPreys() == 0 ? 
+                "Result: 💀 Preys extinct!" : "Result: 💀 Predators extinct!";
         } else {
-            message += "Result: Ecosystem survived!";
+            message += "Result: ✨ Ecosystem survived!";
         }
         
         JOptionPane.showMessageDialog(this, message, 
             "Simulation Complete", JOptionPane.INFORMATION_MESSAGE);
     }
     
-    /**
-     * Genera reporte de la simulacion
-     */
     private void generateReport() {
         JOptionPane.showMessageDialog(this,
-            "Report generation will be implemented in Phase 7",
-            "Coming Soon",
+            "Report generation will be implemented soon!",
+            "Generate Report",
             JOptionPane.INFORMATION_MESSAGE);
     }
     
-    /**
-     * Cierra sesion y regresa al login
-     */
+    private void toggleTerceraEspecie() {
+        if (isRunning) {
+            JOptionPane.showMessageDialog(this,
+                "Cannot toggle species during simulation",
+                "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        terceraEspecieActiva = !terceraEspecieActiva;
+        
+        if (terceraEspecieActiva) {
+            btnToggleTerceraEspecie.setText("3rd Species: ON");
+            btnToggleTerceraEspecie.setBackground(new Color(34, 139, 34));
+            addLog("✓ Third species (Caiman) enabled");
+        } else {
+            btnToggleTerceraEspecie.setText("3rd Species: OFF");
+            btnToggleTerceraEspecie.setBackground(new Color(100, 149, 237));
+            lblCaimanCount.setVisible(false); // Ocultar contador
+            addLog("✗ Third species (Caiman) disabled");
+        }
+    }
+    
+    private void toggleMutaciones() {
+        if (isRunning) {
+            JOptionPane.showMessageDialog(this,
+                "Cannot toggle mutations during simulation",
+                "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        mutacionesActivas = !mutacionesActivas;
+        
+        if (mutacionesActivas) {
+            btnToggleMutaciones.setText("Mutations: ON");
+            btnToggleMutaciones.setBackground(new Color(138, 43, 226));
+            addLog("✓ Genetic mutations enabled");
+        } else {
+            btnToggleMutaciones.setText("Mutations: OFF");
+            btnToggleMutaciones.setBackground(new Color(147, 112, 219));
+            addLog("✗ Genetic mutations disabled");
+        }
+    }
+    
     private void logout() {
         int confirm = JOptionPane.showConfirmDialog(this,
             "Are you sure you want to logout?",
@@ -520,3 +591,4 @@ public class EcosystemView extends JFrame {
         }
     }
 }
+    
