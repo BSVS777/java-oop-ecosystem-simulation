@@ -8,7 +8,7 @@ import util.ImagePanel;
 
 /**
  * Vista mejorada del ecosistema con imágenes, fondo de bosque y funcionalidades completas.
- * Incluye soporte para tercera especie (Caimán) y mutaciones genéticas.
+ * Incluye soporte para tercera especie (Caimán), mutaciones genéticas y reportes PDF.
  */
 public class EcosystemView extends JFrame {
     
@@ -518,18 +518,131 @@ public class EcosystemView extends JFrame {
             message += ecosystem.countPreys() == 0 ? 
                 "Result: 💀 Preys extinct!" : "Result: 💀 Predators extinct!";
         } else {
-            message += "Result: Ecosystem survived!";
+            message += "Result: ✨ Ecosystem survived!";
         }
         
         JOptionPane.showMessageDialog(this, message, 
             "Simulation Complete", JOptionPane.INFORMATION_MESSAGE);
     }
     
+    /**
+     * IMPLEMENTACIÓN COMPLETA: Genera reporte PDF y envía por email
+     * LÍNEAS CRÍTICAS: 543-636
+     */
     private void generateReport() {
-        JOptionPane.showMessageDialog(this,
-            "Report generation will be implemented soon!",
-            "Generate Report",
-            JOptionPane.INFORMATION_MESSAGE);
+        // VALIDACIÓN: Verificar que hay datos de simulación
+        if (controller.getEcosystem() == null) {
+            JOptionPane.showMessageDialog(this,
+                "No simulation data available. Please run a simulation first.",
+                "No Data",
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // CONFIRMACIÓN: Mostrar diálogo con email del usuario
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Generate PDF report and send to email:\n" + currentUser.getEmail() + "?",
+            "Confirm Report Generation",
+            JOptionPane.YES_NO_OPTION);
+        
+        if (confirm != JOptionPane.YES_OPTION) return;
+        
+        // INTERFAZ: Mostrar progress bar indeterminado
+        JDialog progressDialog = new JDialog(this, "Generating Report", true);
+        JProgressBar progressBarDialog = new JProgressBar();
+        progressBarDialog.setIndeterminate(true);
+        progressBarDialog.setString("Generating PDF report...");
+        progressBarDialog.setStringPainted(true);
+        progressDialog.add(progressBarDialog);
+        progressDialog.setSize(300, 80);
+        progressDialog.setLocationRelativeTo(this);
+        
+        // WORKER THREAD: Generar reporte en segundo plano
+        SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
+            @Override
+            protected String doInBackground() throws Exception {
+                // LLAMADA CRÍTICA: ReportGenerator.generateReport()
+                return util.ReportGenerator.generateReport(
+                    controller.getEcosystem(),
+                    currentUser.getName(),
+                    controller.getStateDAO()
+                );
+            }
+            
+            @Override
+            protected void done() {
+                progressDialog.dispose();
+                
+                try {
+                    String pdfPath = get();
+                    
+                    if (pdfPath != null) {
+                        addLog("✓ PDF report generated: " + pdfPath);
+                        
+                        // ENVÍO DE EMAIL: EmailService.sendEmailWithAttachment()
+                        boolean emailSent = new data.EmailService().sendEmailWithAttachment(
+                            currentUser.getEmail(),
+                            "Ecosystem Simulation Report - " + controller.getEcosystem().getScenario(),
+                            generateEmailBody(),
+                            pdfPath
+                        );
+                        
+                        if (emailSent) {
+                            JOptionPane.showMessageDialog(EcosystemView.this,
+                                "Report generated successfully!\n" +
+                                "PDF: " + pdfPath + "\n" +
+                                "Email sent to: " + currentUser.getEmail(),
+                                "Success",
+                                JOptionPane.INFORMATION_MESSAGE);
+                            addLog("✓ Email sent to " + currentUser.getEmail());
+                        } else {
+                            JOptionPane.showMessageDialog(EcosystemView.this,
+                                "Report generated but email failed.\n" +
+                                "PDF saved at: " + pdfPath,
+                                "Partial Success",
+                                JOptionPane.WARNING_MESSAGE);
+                            addLog("✗ Email failed");
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(EcosystemView.this,
+                            "Failed to generate report. Check console for errors.",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                        addLog("✗ Report generation failed");
+                    }
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(EcosystemView.this,
+                        "Error: " + e.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                    e.printStackTrace();
+                }
+            }
+        };
+        
+        worker.execute();
+        progressDialog.setVisible(true);
+    }
+    
+    /**
+     * Genera el cuerpo del email con estadísticas básicas
+     */
+    private String generateEmailBody() {
+        Ecosystem eco = controller.getEcosystem();
+        return String.format(
+            "Simulation completed!\n\n" +
+            "Scenario: %s\n" +
+            "Total Turns: %d\n" +
+            "Final Preys: %d\n" +
+            "Final Predators: %d\n" +
+            "Extinction: %s\n\n" +
+            "Please find the detailed report in the attached PDF.",
+            eco.getScenario(),
+            eco.getCurrentTurn(),
+            eco.countPreys(),
+            eco.countPredators(),
+            eco.hasExtinction() ? "Yes" : "No"
+        );
     }
     
     private void toggleTerceraEspecie() {
@@ -591,4 +704,3 @@ public class EcosystemView extends JFrame {
         }
     }
 }
-    
