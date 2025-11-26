@@ -5,16 +5,18 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Clase Prey con BALANCE MEJORADO.
- * Cambios clave:
- * - Reproducción más lenta: cada 3 turnos (antes: 2)
- * - Muerte por sobrepoblación: si >70% de celdas ocupadas
+ * Clase Prey con BALANCE CRÍTICO MEJORADO.
+ * Cambios para evitar explosión demográfica:
+ * - Reproducción cada 4 turnos (antes: 3)
+ * - Muerte por sobrepoblación más agresiva
+ * - Muerte por estrés en condiciones adversas
  */
 public class Prey extends Animal {
     
     private static final Random random = new Random();
-    private static final int REPRODUCTION_COOLDOWN = 3; // Aumentado de 2 a 3
-    private static final double OVERPOPULATION_THRESHOLD = 0.7; // 70% ocupación
+    private static final int REPRODUCTION_COOLDOWN = 4; // Aumentado de 3 a 4
+    private static final double OVERPOPULATION_THRESHOLD = 0.65; // Reducido de 0.7 a 0.65
+    private static final double STRESS_DEATH_CHANCE = 0.15; // Nueva: muerte por estrés
     
     /**
      * Constructor de Prey
@@ -25,19 +27,25 @@ public class Prey extends Animal {
     }
     
     /**
-     * Implementa el movimiento de la presa.
-     * Se mueve a una celda adyacente vacía aleatoriamente.
-     * @param ecosystem Referencia al ecosistema
+     * Implementa el movimiento de la presa con controles adicionales.
      */
     @Override
     public void move(Ecosystem ecosystem) {
         if (!alive) return;
         
-        // NUEVO: Verificar sobrepoblación
+        // CRÍTICO 1: Verificar sobrepoblación
         if (shouldDieFromOverpopulation(ecosystem)) {
             die();
             ecosystem.removeAnimal(this.position);
             System.out.println("[PREY] Died from overpopulation at " + position);
+            return;
+        }
+        
+        // CRÍTICO 2: Verificar muerte por estrés ambiental
+        if (shouldDieFromStress(ecosystem)) {
+            die();
+            ecosystem.removeAnimal(this.position);
+            System.out.println("[PREY] Died from environmental stress at " + position);
             return;
         }
         
@@ -50,38 +58,79 @@ public class Prey extends Animal {
             this.position = newPosition;
         } else {
             System.out.println("[PREY] At " + this.position + " has no empty cells to move");
+            
+            // NUEVO: Si no puede moverse, 10% chance de muerte por encierro
+            if (random.nextDouble() < 0.10) {
+                die();
+                ecosystem.removeAnimal(this.position);
+                System.out.println("[PREY] Died from confinement at " + position);
+            }
         }
     }
     
     /**
-     * Verifica si debe morir por sobrepoblación
+     * Verifica si debe morir por sobrepoblación.
+     * Probabilidad aumenta con la densidad.
      */
     private boolean shouldDieFromOverpopulation(Ecosystem ecosystem) {
         int totalCells = 100;
         int occupiedCells = totalCells - ecosystem.countEmptyCells();
         double occupationRate = occupiedCells / (double) totalCells;
         
-        // Si hay sobrepoblación, 30% de chance de morir por estrés/recursos
         if (occupationRate > OVERPOPULATION_THRESHOLD) {
-            return random.nextDouble() < 0.3;
+            // Probabilidad escala con la sobrepoblación
+            double deathChance = 0.25 + (occupationRate - OVERPOPULATION_THRESHOLD) * 2;
+            deathChance = Math.min(deathChance, 0.60); // Máximo 60%
+            
+            return random.nextDouble() < deathChance;
         }
         return false;
     }
     
     /**
-     * Verifica si la presa puede reproducirse.
-     * MODIFICADO: Ahora requiere 3 turnos sobrevividos (antes: 2)
-     * @return true si puede reproducirse
+     * NUEVO: Muerte por estrés cuando hay muchos depredadores cerca.
      */
-    @Override
-    public boolean canReproduce() {
-        return alive && turnsSurvived >= REPRODUCTION_COOLDOWN;
+    private boolean shouldDieFromStress(Ecosystem ecosystem) {
+        int nearbyPredators = countNearbyPredators(ecosystem);
+        
+        // Si hay 3+ depredadores cerca, 15% chance de muerte por estrés
+        if (nearbyPredators >= 3) {
+            return random.nextDouble() < STRESS_DEATH_CHANCE;
+        }
+        
+        return false;
     }
     
     /**
-     * Crea una nueva presa en la posición indicada.
-     * @param position Posición del nuevo animal
-     * @return Nueva instancia de Prey
+     * Cuenta depredadores en un radio de 2 celdas.
+     */
+    private int countNearbyPredators(Ecosystem ecosystem) {
+        int count = 0;
+        
+        for (int i = Math.max(0, position.getRow() - 2); 
+             i <= Math.min(9, position.getRow() + 2); i++) {
+            for (int j = Math.max(0, position.getColumn() - 2); 
+                 j <= Math.min(9, position.getColumn() + 2); j++) {
+                Animal animal = ecosystem.getAnimal(new Position(i, j));
+                if (animal instanceof Predator && animal.isAlive()) {
+                    count++;
+                }
+            }
+        }
+        
+        return count;
+    }
+    
+    /**
+     * Reproducción más lenta: cada 4 turnos.
+     */
+    @Override
+    public boolean canReproduce() {
+        return alive && turnsSurvived >= REPRODUCTION_COOLDOWN && turnsSurvived % REPRODUCTION_COOLDOWN == 0;
+    }
+    
+    /**
+     * Crea una nueva presa.
      */
     @Override
     public Animal reproduce(Position position) {
@@ -90,9 +139,7 @@ public class Prey extends Animal {
     }
     
     /**
-     * Obtiene lista de posiciones adyacentes vacías
-     * @param ecosystem Referencia al ecosistema
-     * @return Lista de posiciones disponibles
+     * Obtiene celdas adyacentes vacías.
      */
     private List<Position> getAdjacentEmptyCells(Ecosystem ecosystem) {
         List<Position> emptyCells = new ArrayList<>();

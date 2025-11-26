@@ -518,7 +518,7 @@ public class EcosystemView extends JFrame {
             message += ecosystem.countPreys() == 0 ? 
                 "Result: 💀 Preys extinct!" : "Result: 💀 Predators extinct!";
         } else {
-            message += "Result: ✨ Ecosystem survived!";
+            message += "Result: Ecosystem survived!";
         }
         
         JOptionPane.showMessageDialog(this, message, 

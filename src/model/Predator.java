@@ -5,33 +5,30 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Clase Predator que hereda de Animal.
- * Implementa comportamiento específico de los depredadores:
- * - Movimiento hacia presas o celdas vacías
- * - Caza de presas
- * - Muerte por hambre después de 3 turnos sin comer
- * - Reproducción si comió al menos una vez en los últimos 3 turnos
+ * Clase Predator BALANCEADA.
+ * Cambios críticos:
+ * - Muerte por hambre más gradual (4 turnos en lugar de 3)
+ * - Reproducción más restrictiva
+ * - Comportamiento más inteligente
  */
 public class Predator extends Animal {
     
     private static final Random random = new Random();
-    private static final int MAX_TURNS_WITHOUT_EATING = 3;
-    private int lastTurnAte; // Guarda el turno en que comió por última vez
+    private static final int MAX_TURNS_WITHOUT_EATING = 4; // Aumentado de 3 a 4
+    private int lastTurnAte;
+    private int totalPreysEaten; // Nuevo: contador de presas comidas
     
     /**
      * Constructor de Predator
-     * @param position Posición inicial
      */
     public Predator(Position position) {
         super(position, "PREDATOR");
         this.lastTurnAte = 0;
+        this.totalPreysEaten = 0;
     }
     
     /**
-     * Implementa el movimiento del depredador.
-     * Prioridad: 1) Moverse hacia una presa adyacente (come)
-     *            2) Moverse a una celda vacía
-     * @param ecosystem Referencia al ecosistema
+     * Movimiento mejorado con priorización inteligente.
      */
     @Override
     public void move(Ecosystem ecosystem) {
@@ -41,13 +38,21 @@ public class Predator extends Animal {
         List<Position> adjacentPreys = getAdjacentPreys(ecosystem);
         
         if (!adjacentPreys.isEmpty()) {
-            // Caza una presa aleatoria de las disponibles
             Position preyPosition = adjacentPreys.get(random.nextInt(adjacentPreys.size()));
             hunt(ecosystem, preyPosition);
             return;
         }
         
-        // Si no hay presas, se mueve a una celda vacía
+        // NUEVO: Si tiene mucha hambre (2+ turnos), busca presas cercanas (radio 2)
+        if (turnsWithoutEating >= 2) {
+            Position nearbyPrey = findNearbyPrey(ecosystem, 2);
+            if (nearbyPrey != null) {
+                moveTowards(ecosystem, nearbyPrey);
+                return;
+            }
+        }
+        
+        // Si no hay presas, se mueve a celda vacía
         List<Position> emptyCells = getAdjacentEmptyCells(ecosystem);
         
         if (!emptyCells.isEmpty()) {
@@ -61,54 +66,109 @@ public class Predator extends Animal {
     }
     
     /**
-     * Caza una presa en la posición indicada
-     * @param ecosystem Referencia al ecosistema
-     * @param preyPosition Posición de la presa a cazar
+     * Caza una presa.
      */
     private void hunt(Ecosystem ecosystem, Position preyPosition) {
         Animal prey = ecosystem.getAnimal(preyPosition);
         
-        if (prey != null && prey instanceof Prey) {
-            // Mata la presa
+        if (prey != null && prey instanceof Prey && prey.isAlive()) {
             prey.die();
             ecosystem.removeAnimal(preyPosition);
             
-            // Mueve el depredador a esa posicion
             ecosystem.moveAnimal(this, preyPosition);
             System.out.println("[PREDATOR] Hunted prey at " + preyPosition);
             this.position = preyPosition;
             
-            // Resetea contador de hambre
             resetTurnsWithoutEating();
             this.lastTurnAte = ecosystem.getCurrentTurn();
+            this.totalPreysEaten++;
         }
     }
     
     /**
-     * Verifica si el depredador puede reproducirse.
-     * Condición: haber comido al menos una vez en los últimos 3 turnos Y
-     *            haber sobrevivido al menos 3 turnos.
-     * @return true si puede reproducirse
+     * NUEVO: Busca presas en un radio específico.
+     */
+    private Position findNearbyPrey(Ecosystem ecosystem, int radius) {
+        List<Position> nearbyPreys = new ArrayList<>();
+        
+        for (int i = Math.max(0, position.getRow() - radius); 
+             i <= Math.min(9, position.getRow() + radius); i++) {
+            for (int j = Math.max(0, position.getColumn() - radius); 
+                 j <= Math.min(9, position.getColumn() + radius); j++) {
+                
+                Position pos = new Position(i, j);
+                if (!pos.equals(position)) {
+                    Animal animal = ecosystem.getAnimal(pos);
+                    if (animal instanceof Prey && animal.isAlive()) {
+                        nearbyPreys.add(pos);
+                    }
+                }
+            }
+        }
+        
+        return nearbyPreys.isEmpty() ? null : nearbyPreys.get(random.nextInt(nearbyPreys.size()));
+    }
+    
+    /**
+     * NUEVO: Se mueve hacia una presa lejana.
+     */
+    private void moveTowards(Ecosystem ecosystem, Position target) {
+        int rowDiff = target.getRow() - position.getRow();
+        int colDiff = target.getColumn() - position.getColumn();
+        
+        List<Position> candidates = new ArrayList<>();
+        
+        // Prioriza movimiento vertical
+        if (rowDiff != 0) {
+            int newRow = position.getRow() + (rowDiff > 0 ? 1 : -1);
+            Position candidate = new Position(newRow, position.getColumn());
+            if (candidate.isValid() && ecosystem.isEmpty(candidate)) {
+                candidates.add(candidate);
+            }
+        }
+        
+        // Prioriza movimiento horizontal
+        if (colDiff != 0) {
+            int newCol = position.getColumn() + (colDiff > 0 ? 1 : -1);
+            Position candidate = new Position(position.getRow(), newCol);
+            if (candidate.isValid() && ecosystem.isEmpty(candidate)) {
+                candidates.add(candidate);
+            }
+        }
+        
+        if (!candidates.isEmpty()) {
+            Position newPosition = candidates.get(random.nextInt(candidates.size()));
+            ecosystem.moveAnimal(this, newPosition);
+            System.out.println("[PREDATOR] Moving towards prey from " + this.position + " to " + newPosition);
+            this.position = newPosition;
+        }
+    }
+    
+    /**
+     * Reproducción MÁS RESTRICTIVA.
+     * Ahora requiere: haber comido recientemente Y haber comido al menos 2 presas en total.
      */
     @Override
     public boolean canReproduce() {
         if (!alive) return false;
-        // Más restrictivo: necesita haber comido Y haber sobrevivido suficiente
-        return turnsWithoutEating == 0 && turnsSurvived >= 3;
+        
+        // Debe haber comido en los últimos 2 turnos Y haber comido al menos 2 presas
+        boolean ateRecently = turnsWithoutEating <= 1;
+        boolean hasEatenEnough = totalPreysEaten >= 2;
+        boolean hasSurvivedEnough = turnsSurvived >= 5; // Aumentado de 3 a 5
+        
+        return ateRecently && hasEatenEnough && hasSurvivedEnough;
     }
     
     /**
-     * Verifica si el depredador debe morir por hambre
-     * @return true si debe morir
+     * Verificación de muerte por hambre (ahora 4 turnos).
      */
     public boolean shouldDieFromHunger() {
         return turnsWithoutEating >= MAX_TURNS_WITHOUT_EATING;
     }
     
     /**
-     * Crea un nuevo depredador en la posición indicada.
-     * @param position Posición del nuevo animal
-     * @return Nueva instancia de Predator
+     * Crea un nuevo depredador.
      */
     @Override
     public Animal reproduce(Position position) {
@@ -117,9 +177,7 @@ public class Predator extends Animal {
     }
     
     /**
-     * Obtiene lista de posiciones adyacentes con presas
-     * @param ecosystem Referencia al ecosistema
-     * @return Lista de posiciones con presas
+     * Obtiene presas adyacentes.
      */
     private List<Position> getAdjacentPreys(Ecosystem ecosystem) {
         List<Position> preys = new ArrayList<>();
@@ -132,7 +190,7 @@ public class Predator extends Animal {
             
             if (newPos.isValid()) {
                 Animal animal = ecosystem.getAnimal(newPos);
-                if (animal != null && animal instanceof Prey && animal.isAlive()) {
+                if (animal instanceof Prey && animal.isAlive()) {
                     preys.add(newPos);
                 }
             }
@@ -142,9 +200,7 @@ public class Predator extends Animal {
     }
     
     /**
-     * Obtiene lista de posiciones adyacentes vacías
-     * @param ecosystem Referencia al ecosistema
-     * @return Lista de posiciones disponibles
+     * Obtiene celdas vacías adyacentes.
      */
     private List<Position> getAdjacentEmptyCells(Ecosystem ecosystem) {
         List<Position> emptyCells = new ArrayList<>();
@@ -163,8 +219,14 @@ public class Predator extends Animal {
         return emptyCells;
     }
     
+    public int getTotalPreysEaten() {
+        return totalPreysEaten;
+    }
+    
     @Override
     public String toString() {
-        return "PREDATOR " + super.toString() + ", Turns without eating: " + turnsWithoutEating;
+        return "PREDATOR " + super.toString() + 
+               ", Turns without eating: " + turnsWithoutEating + 
+               ", Total eaten: " + totalPreysEaten;
     }
 }
