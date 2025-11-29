@@ -240,12 +240,12 @@ public class EcosystemView extends JFrame {
         panel.add(lblCurrentTurn);
         panel.add(Box.createVerticalStrut(10));
         
-        lblPreyCount = createStatLabel("🐰 Preys: 0");
+        lblPreyCount = createStatLabel("Preys: 0");
         lblPreyCount.setForeground(new Color(100, 200, 100));
         panel.add(lblPreyCount);
         panel.add(Box.createVerticalStrut(5));
         
-        lblPredatorCount = createStatLabel("🐺 Predators: 0");
+        lblPredatorCount = createStatLabel("Predators: 0");
         lblPredatorCount.setForeground(new Color(180, 50, 50));
         panel.add(lblPredatorCount);
         panel.add(Box.createVerticalStrut(5));
@@ -518,7 +518,7 @@ public class EcosystemView extends JFrame {
             message += ecosystem.countPreys() == 0 ? 
                 "Result: 💀 Preys extinct!" : "Result: 💀 Predators extinct!";
         } else {
-            message += "Result: ✨ Ecosystem survived!";
+            message += "Result: Ecosystem survived!";
         }
         
         JOptionPane.showMessageDialog(this, message, 
