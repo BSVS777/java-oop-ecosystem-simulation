@@ -12,6 +12,7 @@ public abstract class Animal {
     protected int turnsSurvived;
     protected boolean alive;
     protected String type; // "PREY" o "PREDATOR"
+    protected int mutationFactor = 0;
     
     /**
      * Constructor base de Animal
@@ -96,6 +97,14 @@ public abstract class Animal {
     
     public String getType() {
         return type;
+    }
+
+    public int getMutationFactor() {
+        return mutationFactor;
+    }
+
+    public void setMutationFactor(int factor) {
+        this.mutationFactor = Math.max(-1, Math.min(1, factor));
     }
     
     @Override

@@ -108,6 +108,26 @@ public class StateDAO {
     }
     
     /**
+     * Encuentra el turno exacto donde ocurrió la extinción de una especie.
+     * @param simulationId ID de la simulación
+     * @param species Especie a buscar ("PREYS" o "PREDATORS")
+     * @return Número de turno donde se extinguió, o -1 si no se extinguió
+     */
+    public int findExtinctionTurn(String simulationId, String species) {
+        List<TurnState> states = loadSimulationStates(simulationId);
+
+        for (TurnState state : states) {
+            if (species.equals("PREYS") && state.preys == 0) {
+                return state.turn;
+            } else if (species.equals("PREDATORS") && state.predators == 0) {
+                return state.turn;
+            }
+        }
+
+        return -1; // No se extinguió
+    }
+    
+    /**
      * Guarda el estado final de la simulacion
      * @param ecosystem Ecosistema final
      * @param totalTurns Total de turnos ejecutados

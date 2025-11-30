@@ -19,7 +19,7 @@ public class ImagePanel extends JPanel {
             if (url != null) {
                 backgroundImage = ImageIO.read(url);
             } else {
-                System.err.println("⚠ Warning: Image not found at: " + imagePath);
+                System.err.println("Warning: Image not found at: " + imagePath);
             }
         } catch (IOException e) {
             e.printStackTrace();

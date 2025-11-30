@@ -132,11 +132,22 @@ public class EcosystemView extends JFrame {
         btnReport.addActionListener(e -> generateReport());
         panel.add(btnReport);
         
+        panel.add(Box.createHorizontalStrut(10));
+
+        JButton btnComparison = createButton("Comparison", new Color(100, 149, 237), Color.BLACK, 120);
+        btnComparison.addActionListener(e -> openComparisonAnalysis());
+        panel.add(btnComparison);
+        
         btnLogout = createButton("Logout", COLOR_TEXT_DARK, Color.BLACK, 90);
         btnLogout.addActionListener(e -> logout());
         panel.add(btnLogout);
         
         return panel;
+    }
+    
+    private void openComparisonAnalysis() {
+    ComparisonAnalysisView comparisonView = new ComparisonAnalysisView();
+    comparisonView.setVisible(true);
     }
     
     private JPanel createMatrixPanelWithBackground() {

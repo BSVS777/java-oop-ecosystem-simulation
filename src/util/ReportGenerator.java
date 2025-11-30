@@ -462,7 +462,15 @@ public class ReportGenerator {
     }
     
     private static int findExtinctionTurn(StateDAO stateDAO, Ecosystem ecosystem) {
-        // Implementación simplificada
-        return ecosystem.getCurrentTurn();
-    }
+    String extinctSpecies = ecosystem.countPreys() == 0 ? "PREYS" : "PREDATORS";
+    
+    // Construir simulation ID basado en el escenario y turno actual
+    // Nota: Esto es una aproximación. Idealmente deberías pasar el ID completo
+    int turn = stateDAO.findExtinctionTurn(
+        ecosystem.getScenario() + "_", 
+        extinctSpecies
+    );
+    
+    return turn != -1 ? turn : ecosystem.getCurrentTurn();
+}
 }

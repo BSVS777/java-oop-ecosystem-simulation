@@ -126,7 +126,12 @@ public class Prey extends Animal {
      */
     @Override
     public boolean canReproduce() {
-        return alive && turnsSurvived >= REPRODUCTION_COOLDOWN && turnsSurvived % REPRODUCTION_COOLDOWN == 0;
+        // Ajustar cooldown basado en mutación genética
+        int adjustedCooldown = REPRODUCTION_COOLDOWN + mutationFactor;
+        adjustedCooldown = Math.max(2, adjustedCooldown); // Mínimo 2 turnos
+
+        return alive && turnsSurvived >= adjustedCooldown && 
+               turnsSurvived % adjustedCooldown == 0;
     }
     
     /**

@@ -151,12 +151,14 @@ public class Predator extends Animal {
     @Override
     public boolean canReproduce() {
         if (!alive) return false;
-        
-        // Debe haber comido en los últimos 2 turnos Y haber comido al menos 2 presas
+
+        int adjustedSurvivalRequirement = 5 + mutationFactor;
+        adjustedSurvivalRequirement = Math.max(3, adjustedSurvivalRequirement);
+
         boolean ateRecently = turnsWithoutEating <= 1;
         boolean hasEatenEnough = totalPreysEaten >= 2;
-        boolean hasSurvivedEnough = turnsSurvived >= 5; // Aumentado de 3 a 5
-        
+        boolean hasSurvivedEnough = turnsSurvived >= adjustedSurvivalRequirement;
+
         return ateRecently && hasEatenEnough && hasSurvivedEnough;
     }
     

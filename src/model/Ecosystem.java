@@ -138,13 +138,14 @@ public class Ecosystem {
      * La mutación afecta la velocidad de reproducción
      */
     private void applyMutation(Animal animal) {
-        // Mutación aleatoria: -1, 0, o +1 en el tiempo de reproducción
-        int mutation = random.nextInt(3) - 1;
-        
-        // Aquí podrías agregar un campo mutationFactor en Animal
-        // Por ahora solo lo registramos
-        System.out.println("[MUTATION] Applied to " + animal.getType() + 
-                          " at " + animal.getPosition() + ": " + mutation);
+    int mutation = random.nextInt(3) - 1; // -1, 0, o +1
+    animal.setMutationFactor(mutation);
+    
+    String effect = mutation == -1 ? "SLOWER reproduction" : 
+                   (mutation == 1 ? "FASTER reproduction" : "NO CHANGE");
+    
+    System.out.println("[MUTATION] Applied to " + animal.getType() + 
+                      " at " + animal.getPosition() + ": " + effect);
     }
     
     public String executeTurn() {
