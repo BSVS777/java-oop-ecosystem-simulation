@@ -13,7 +13,7 @@ import java.awt.Color;
 
 /**
  * Generador de reportes en PDF con gráficos y estadísticas.
- * Incluye gráficos de pastel, estadísticas completas y análisis.
+ * VERSIÓN CORREGIDA: Tabla de turnos ahora muestra datos correctamente.
  */
 public class ReportGenerator {
     
@@ -60,7 +60,7 @@ public class ReportGenerator {
             addExtinctionAnalysis(document, ecosystem, stateDAO);
             document.add(Chunk.NEWLINE);
             
-            // Evolución por turnos (tabla)
+            // Evolución por turnos (tabla) - CORREGIDO
             addTurnEvolutionTable(document, stateDAO, ecosystem);
             
             // Footer
@@ -371,7 +371,7 @@ public class ReportGenerator {
     }
     
     /**
-     * Agrega tabla de evolución por turnos.
+     * Agrega tabla de evolución por turnos - VERSIÓN CORREGIDA.
      */
     private static void addTurnEvolutionTable(Document document, StateDAO stateDAO, Ecosystem ecosystem) 
             throws DocumentException {
@@ -393,25 +393,98 @@ public class ReportGenerator {
         }
         addTableHeaderCell(table, "Empty");
         
-        // Datos (mostrar cada 2 turnos para no saturar)
-        List<StateDAO.TurnState> states = stateDAO.loadSimulationStates(
-            ecosystem.getScenario() + "_" + ecosystem.getCurrentTurn()
-        );
+        // FIX CRÍTICO: Obtener el simulation ID correcto
+        // El StateDAO guarda con formato: "scenario_username_timestamp"
+        // Necesitamos obtener todos los IDs y buscar el más reciente del escenario actual
+        List<String> allSimIds = stateDAO.getAllSimulationIds();
+        String targetSimId = null;
         
-        int step = Math.max(1, ecosystem.getCurrentTurn() / 10); // Máximo 10 filas
+        // Buscar el ID más reciente que coincida con el escenario actual
+        String scenarioPrefix = ecosystem.getScenario() + "_";
+        for (int i = allSimIds.size() - 1; i >= 0; i--) {
+            String simId = allSimIds.get(i);
+            if (simId.startsWith(scenarioPrefix)) {
+                targetSimId = simId;
+                break;
+            }
+        }
         
+        // Si no encontramos ID, mostrar mensaje informativo
+        if (targetSimId == null) {
+            addTableCell(table, "No data available");
+            addTableCell(table, "-");
+            addTableCell(table, "-");
+            if (ecosystem.isTerceraEspecieActiva()) {
+                addTableCell(table, "-");
+            }
+            addTableCell(table, "-");
+            document.add(table);
+            
+            Paragraph note = new Paragraph(
+                "Note: Turn-by-turn data is only available when simulation is executed from the interface.",
+                new Font(Font.FontFamily.HELVETICA, 10, Font.ITALIC, BaseColor.GRAY)
+            );
+            document.add(note);
+            return;
+        }
+        
+        // Cargar estados con el ID correcto
+        List<StateDAO.TurnState> states = stateDAO.loadSimulationStates(targetSimId);
+        
+        System.out.println("[REPORT] Loading turn states for: " + targetSimId);
+        System.out.println("[REPORT] Found " + states.size() + " turn states");
+        
+        if (states.isEmpty()) {
+            addTableCell(table, "No turns recorded");
+            addTableCell(table, "-");
+            addTableCell(table, "-");
+            if (ecosystem.isTerceraEspecieActiva()) {
+                addTableCell(table, "-");
+            }
+            addTableCell(table, "-");
+            document.add(table);
+            return;
+        }
+        
+        // Determinar paso: mostrar máximo 15 filas
+        int step = Math.max(1, states.size() / 15);
+        
+        // Agregar datos
         for (int i = 0; i < states.size(); i += step) {
             StateDAO.TurnState state = states.get(i);
             addTableCell(table, String.valueOf(state.turn));
             addTableCell(table, String.valueOf(state.preys));
             addTableCell(table, String.valueOf(state.predators));
             if (ecosystem.isTerceraEspecieActiva()) {
-                addTableCell(table, "N/A"); // TODO: agregar contador en StateDAO
+                addTableCell(table, "N/A"); // TODO: agregar en StateDAO
             }
             addTableCell(table, String.valueOf(state.empty));
         }
         
+        // Siempre agregar el último turno si no está incluido
+        StateDAO.TurnState lastState = states.get(states.size() - 1);
+        if ((states.size() - 1) % step != 0) {
+            addTableCell(table, String.valueOf(lastState.turn));
+            addTableCell(table, String.valueOf(lastState.preys));
+            addTableCell(table, String.valueOf(lastState.predators));
+            if (ecosystem.isTerceraEspecieActiva()) {
+                addTableCell(table, "N/A");
+            }
+            addTableCell(table, String.valueOf(lastState.empty));
+        }
+        
         document.add(table);
+        
+        // Nota informativa sobre el muestreo
+        if (step > 1) {
+            Paragraph note = new Paragraph(
+                String.format("Note: Showing data every %d turn(s) for readability (total: %d turns)",
+                             step, states.size()),
+                new Font(Font.FontFamily.HELVETICA, 9, Font.ITALIC, BaseColor.GRAY)
+            );
+            note.setSpacingBefore(5);
+            document.add(note);
+        }
     }
     
     /**
@@ -461,16 +534,31 @@ public class ReportGenerator {
         return ratio >= 1.5 && ratio <= 3.0; // Balance ideal: 1.5 a 3 presas por depredador
     }
     
+    /**
+     * Encuentra el turno de extinción - VERSIÓN CORREGIDA.
+     */
     private static int findExtinctionTurn(StateDAO stateDAO, Ecosystem ecosystem) {
-    String extinctSpecies = ecosystem.countPreys() == 0 ? "PREYS" : "PREDATORS";
-    
-    // Construir simulation ID basado en el escenario y turno actual
-    // Nota: Esto es una aproximación. Idealmente deberías pasar el ID completo
-    int turn = stateDAO.findExtinctionTurn(
-        ecosystem.getScenario() + "_", 
-        extinctSpecies
-    );
-    
-    return turn != -1 ? turn : ecosystem.getCurrentTurn();
-}
+        String extinctSpecies = ecosystem.countPreys() == 0 ? "PREYS" : "PREDATORS";
+        
+        // Buscar el simulation ID más reciente del escenario actual
+        List<String> allSimIds = stateDAO.getAllSimulationIds();
+        String targetSimId = null;
+        String scenarioPrefix = ecosystem.getScenario() + "_";
+        
+        for (int i = allSimIds.size() - 1; i >= 0; i--) {
+            String simId = allSimIds.get(i);
+            if (simId.startsWith(scenarioPrefix)) {
+                targetSimId = simId;
+                break;
+            }
+        }
+        
+        if (targetSimId == null) {
+            return ecosystem.getCurrentTurn();
+        }
+        
+        int turn = stateDAO.findExtinctionTurn(targetSimId, extinctSpecies);
+        
+        return turn != -1 ? turn : ecosystem.getCurrentTurn();
+    }
 }
